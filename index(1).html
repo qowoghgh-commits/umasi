@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>우마시 - 우리들의 마음 나누기</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            title: ['Jua', 'sans-serif'],
+            body: ['Noto Sans KR', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      user-select: none;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+    .font-cute {
+      font-family: 'Jua', cursive, sans-serif;
+    }
+    @keyframes gentle-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    .animate-gentle {
+      animation: gentle-bounce 2.2s infinite ease-in-out;
+    }
+    @keyframes heart-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .animate-heart-pulse {
+      animation: heart-pulse 1.8s infinite ease-in-out;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 8px;
+    }
+    button, input, select, textarea {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-amber-50 via-rose-50 to-sky-50 min-h-screen text-slate-800 flex flex-col justify-between">
+
+  <!-- 헤더 -->
+  <header class="bg-white/90 backdrop-blur-md sticky top-0 z-30 shadow-sm border-b border-orange-100 px-3 py-2.5 sm:px-6">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center space-x-2.5 cursor-pointer min-w-0" onclick="navigateHome()">
+        <span class="text-2xl sm:text-3xl lg:text-4xl animate-gentle flex-shrink-0">💌</span>
+        <div class="min-w-0">
+          <h1 class="text-lg sm:text-xl md:text-2xl font-cute text-amber-700 tracking-wide flex items-center gap-1.5 truncate">
+            <span>우마시</span>
+            <span class="text-[11px] sm:text-xs font-normal text-rose-500 bg-rose-100 px-2 py-0.5 rounded-full whitespace-nowrap">우리들의 마음 나누기</span>
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-500 hidden md:block truncate">친구의 글을 읽고 따뜻한 이모티콘과 응원을 선물해요</p>
+        </div>
+      </div>
+
+      <!-- 우측 상단 사용자 상태 & 교사 관리 버튼 -->
+      <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+        <div id="currentUserBadge" class="hidden items-center gap-1.5 bg-amber-100 border border-amber-300 px-2.5 py-1.5 rounded-2xl text-xs sm:text-sm font-medium text-amber-900 max-w-[140px] sm:max-w-none">
+          <i class="fa-solid fa-user-graduate text-amber-600 flex-shrink-0"></i>
+          <span id="currentUserNameText" class="truncate">학생이름</span>
+          <button onclick="logoutStudent()" title="다른 친구로 변경" class="ml-1 text-slate-400 hover:text-rose-600 p-0.5 flex-shrink-0">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+
+        <button onclick="promptTeacherAuth()" class="flex items-center gap-1 bg-white border border-slate-200 hover:border-amber-400 text-slate-700 px-2.5 sm:px-3 py-1.5 rounded-2xl text-xs sm:text-sm shadow-sm transition hover:shadow flex-shrink-0">
+          <i class="fa-solid fa-chalkboard-user text-amber-500 text-xs sm:text-sm"></i>
+          <span class="font-cute text-xs sm:text-sm whitespace-nowrap">선생님 관리</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 선생님 모드 안내 배너 -->
+  <div id="teacherViewBanner" class="hidden bg-indigo-600 text-white px-3 sm:px-4 py-2 text-xs sm:text-sm shadow-md">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="bg-indigo-800 px-2 py-0.5 rounded-full font-cute whitespace-nowrap flex-shrink-0 text-xs">선생님 모드</span>
+        <span class="font-medium truncate text-xs sm:text-sm">전체 학생들의 느낀점을 제한 없이 조회하고 수정·삭제·지도할 수 있는 관리자 뷰입니다.</span>
+      </div>
+      <button onclick="exitTeacherFeedbacksView()" class="bg-white/20 hover:bg-white/30 text-white font-cute text-xs px-2.5 py-1 rounded-xl transition whitespace-nowrap flex-shrink-0">
+        선생님 뷰 닫기
+      </button>
+    </div>
+  </div>
+
+  <main class="max-w-7xl mx-auto w-full p-3 sm:p-5 lg:p-6 flex-grow flex flex-col justify-center">
+
+    <!-- 화면 1: 로그인 화면 -->
+    <section id="loginScreen" class="w-full max-w-md mx-auto my-auto bg-white/95 rounded-3xl p-5 sm:p-7 shadow-xl border-4 border-amber-200 text-center transition-all">
+      <div class="inline-block p-3 bg-amber-100 rounded-full mb-2 text-3xl sm:text-4xl animate-gentle">
+        ✨🌻✨
+      </div>
+      <h2 class="text-xl sm:text-2xl font-cute text-slate-800 mb-1.5">반가워요! 누구인가요?</h2>
+      <p class="text-xs sm:text-sm text-slate-500 mb-5">자신의 이름을 선택하거나 직접 적고 들어가요.</p>
+
+      <div class="space-y-3.5 text-left">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1 ml-1">
+            <i class="fa-solid fa-list-ul mr-1 text-amber-500"></i>명단에서 내 이름 고르기
+          </label>
+          <select id="studentSelectDropdown" onchange="syncSelectedName(this.value)" class="w-full bg-slate-50 border-2 border-slate-200 focus:border-amber-400 rounded-2xl p-3 text-slate-700 text-sm sm:text-base outline-none transition cursor-pointer">
+            <option value="">-- 내 이름을 찾아보세요 --</option>
+          </select>
+        </div>
+
+        <div class="relative flex py-0.5 items-center">
+          <div class="flex-grow border-t border-slate-200"></div>
+          <span class="flex-shrink mx-3 text-xs text-slate-400 font-medium">또는 직접 쓰기</span>
+          <div class="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1 ml-1">
+            <i class="fa-solid fa-pencil mr-1 text-rose-500"></i>내 이름 직접 쓰기
+          </label>
+          <input type="text" id="manualNameInput" placeholder="예: 김하늘" maxlength="10" 
+                 class="w-full bg-slate-50 border-2 border-slate-200 focus:border-rose-400 rounded-2xl p-3 text-slate-800 text-sm sm:text-base outline-none transition">
+        </div>
+
+        <button onclick="handleStudentLogin()" class="w-full mt-3 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-cute text-lg sm:text-xl py-3 px-4 rounded-2xl shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+          <span>마음 나누러 가기</span>
+          <i class="fa-solid fa-arrow-right text-sm"></i>
+        </button>
+      </div>
+
+      <div class="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+        <span>등록된 친구: <span id="currentListCount" class="font-bold text-amber-600">0</span>명</span>
+        <button onclick="promptTeacherAuth()" class="text-amber-600 hover:underline">선생님 관리</button>
+      </div>
+    </section>
+
+    <!-- 화면 2: 메인 대시보드 화면 -->
+    <section id="dashboardScreen" class="hidden space-y-4 sm:space-y-5">
+      
+      <!-- 상단 배너 -->
+      <div class="bg-white/95 border-2 border-amber-200 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="text-base sm:text-lg md:text-xl font-cute text-slate-800 flex items-center gap-2 leading-tight">
+            <span class="text-xl sm:text-2xl flex-shrink-0">📖</span> 
+            <span>인쇄된 종이 글을 읽고, 친구에게 따뜻한 마음을 전해주세요!</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 mt-1 leading-normal">
+            글 내용은 인쇄물로 확인하고, 아래 친구 카드를 눌러 느낀점과 이모티콘을 선물해보세요.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 self-start md:self-auto text-xs flex-shrink-0">
+          <div class="bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-xl font-medium whitespace-nowrap">
+            전체 친구 <span id="statTotalStudents" class="font-bold">0</span>명
+          </div>
+          <div class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-xl font-medium whitespace-nowrap">
+            작성된 마음 <span id="statTotalFeedbacks" class="font-bold">0</span>개
+          </div>
+          <div id="readPermissionIndicator" class="px-2.5 py-1 rounded-xl font-medium text-xs border bg-slate-100 text-slate-600 border-slate-200 whitespace-nowrap">
+            내 글 확인: 대기 중 🔒
+          </div>
+        </div>
+      </div>
+
+      <!-- 콘텐츠 그리드: 친구별 글 카드 & 마음 나무 성장 위젯 -->
+      <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 items-start">
+        
+        <!-- 왼쪽: 친구별 글 카드 영역 -->
+        <div class="md:col-span-2 xl:col-span-3 space-y-3">
+          <div class="flex items-center justify-between px-1">
+            <h3 class="font-cute text-base sm:text-lg text-slate-700 flex items-center gap-1.5">
+              <span>친구들의 글 모음함</span>
+              <span class="text-[11px] sm:text-xs font-normal text-slate-500 font-sans hidden sm:inline">(카드를 누르면 친구들의 소감을 크게 볼 수 있어요)</span>
+            </h3>
+            <span class="text-[11px] sm:text-xs text-slate-400 whitespace-nowrap">실시간 반영 중</span>
+          </div>
+
+          <div id="articlesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
+            <!-- 동적으로 생성됩니다 -->
+          </div>
+        </div>
+
+        <!-- 오른쪽/하단: 사이드바 (마음 나무 단계별 성장) -->
+        <aside class="md:col-span-1 space-y-3.5 sm:space-y-4 md:sticky md:top-16">
+          
+          <!-- 카드 1: 내가 선물한 마음 레벨 -->
+          <div class="bg-white/95 rounded-3xl p-4 sm:p-5 border-4 border-amber-200 shadow-sm relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-100 rounded-full opacity-40 blur-lg pointer-events-none"></div>
+            
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1 whitespace-nowrap">
+                <i class="fa-solid fa-seedling text-emerald-600"></i> 내 마음 나무
+              </span>
+              <span id="myLevelBadge" class="text-xs font-cute text-amber-800 bg-amber-200 px-2 py-0.5 rounded-lg whitespace-nowrap">Lv.1 씨앗</span>
+            </div>
+
+            <div class="text-center py-2">
+              <div id="myGrowthIcon" class="text-5xl sm:text-6xl my-1 animate-gentle transition-transform duration-300">
+                🌱
+              </div>
+              <h4 id="myGrowthTitle" class="text-base sm:text-lg font-cute text-slate-800 mt-1">마음의 씨앗</h4>
+              <p id="myGrowthDescription" class="text-xs text-slate-500 mt-0.5 leading-relaxed px-1">
+                친구들에게 다정한 마음을 선물해 새싹을 틔워보세요!
+              </p>
+            </div>
+
+            <!-- 경험치 게이지 -->
+            <div class="space-y-1.5 mt-2 bg-slate-50 p-2.5 sm:p-3 rounded-2xl border border-slate-100">
+              <div class="flex justify-between text-xs font-bold">
+                <span class="text-slate-600">내가 남긴 소감</span>
+                <span id="myFeedbackCountText" class="text-amber-600 font-mono">0개</span>
+              </div>
+              <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden shadow-inner">
+                <div id="myGrowthProgressBar" class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 h-2.5 rounded-full transition-all duration-700" style="width: 0%"></div>
+              </div>
+              <p id="myNextLevelText" class="text-[11px] text-right text-slate-400 truncate">
+                다음 단계까지 1개 남았어요!
+              </p>
+            </div>
+          </div>
+
+          <!-- 카드 2: 우리 반 전체 마음 숲 -->
+          <div class="bg-white/95 rounded-3xl p-4 sm:p-5 border-2 border-emerald-200 shadow-sm">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1 whitespace-nowrap">
+                <i class="fa-solid fa-tree text-emerald-600"></i> 우리 반 마음 숲
+              </span>
+              <span id="classForestLevelBadge" class="text-[11px] font-cute text-emerald-800 whitespace-nowrap">울창도 0%</span>
+            </div>
+
+            <div class="text-center py-1.5">
+              <div id="classForestIcon" class="text-3xl sm:text-4xl my-1 animate-heart-pulse">
+                🏡🌱
+              </div>
+              <h5 id="classForestTitle" class="text-sm font-cute text-emerald-900">모두의 작은 정원</h5>
+              <p id="classForestDescription" class="text-[11px] text-slate-500 mt-0.5 leading-snug px-1">
+                학급 친구들의 따뜻한 말들이 모여 푸른 숲을 만들고 있어요.
+              </p>
+            </div>
+
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden mt-2.5 shadow-inner">
+              <div id="classForestProgressBar" class="bg-gradient-to-r from-emerald-400 to-teal-500 h-2.5 rounded-full transition-all duration-700" style="width: 0%"></div>
+            </div>
+
+            <div class="mt-3.5 pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1">
+              <div class="font-bold text-slate-700 mb-1 flex items-center gap-1">
+                <i class="fa-solid fa-circle-info text-amber-500"></i> 마음 성장 단계 안내
+              </div>
+              <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-600">
+                <span>🌱 씨앗 (0개)</span>
+                <span>🌿 새싹 (1개~)</span>
+                <span>🌷 꽃봉오리 (3개~)</span>
+                <span>🌸 활짝 핀 꽃 (5개~)</span>
+                <span>🌳 사랑 나무 (8개~)</span>
+                <span>🌈 무지개 숲 (12개~)</span>
+              </div>
+            </div>
+          </div>
+
+        </aside>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div id="writeModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl border-4 border-amber-300 max-h-[92vh] overflow-y-auto custom-scroll relative">
+      <button onclick="closeWriteModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
+        ✕
+      </button>
+
+      <div class="text-center mb-4 pr-6">
+        <span class="inline-block px-2.5 py-0.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-full mb-1">마음 전달하기</span>
+        <h3 class="text-xl sm:text-2xl font-cute text-slate-800 truncate">
+          <span id="writeTargetAuthorName" class="text-amber-600 underline decoration-amber-300 underline-offset-4 font-bold">학생이름</span>의 글
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">글을 읽고 느낀 감정과 힘이 되는 한 줄을 선물해요.</p>
+      </div>
+
+      <!-- 이모티콘 선택 영역 -->
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+          1. 어떤 기분이나 느낌이 들었나요? (하나 선택)
+        </label>
+        <div id="emojiPickerList" class="grid grid-cols-4 sm:grid-cols-6 gap-2">
+          <!-- JS에서 동적 주입 -->
+        </div>
+      </div>
+
+      <!-- 체크박스 다중 선택 영역 -->
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1.5">
+          2. 어떤 이야기를 전하고 싶나요? (중복 선택 가능)
+        </label>
+        <div id="categoryCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition">
+            <input type="checkbox" value="궁금한 점" class="cat-checkbox text-amber-500 rounded focus:ring-amber-400 w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">🔍 궁금한 점</span>
+          </label>
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition">
+            <input type="checkbox" value="느낀점" class="cat-checkbox text-amber-500 rounded focus:ring-amber-400 w-4 h-4" checked>
+            <span class="font-medium text-slate-700 truncate">💭 느낀점</span>
+          </label>
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition">
+            <input type="checkbox" value="재미있었던 점" class="cat-checkbox text-amber-500 rounded focus:ring-amber-400 w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">😆 재미있었던 점</span>
+          </label>
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition">
+            <input type="checkbox" value="공감되었던 점" class="cat-checkbox text-amber-500 rounded focus:ring-amber-400 w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">🤝 공감되었던 점</span>
+          </label>
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition">
+            <input type="checkbox" value="기타" class="cat-checkbox text-amber-500 rounded focus:ring-amber-400 w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">✨ 기타</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 한 줄 소감 입력 -->
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1 flex justify-between">
+          <span>3. 친구에게 전할 다정한 느낀점</span>
+          <span id="charCounter" class="text-slate-400 font-normal">0 / 80자</span>
+        </label>
+        <textarea id="feedbackCommentInput" rows="3" maxlength="80" 
+                  oninput="updateCharCount(this)"
+                  placeholder="예: 이야기를 읽으니 흥미진진했어! 특히 결말 부분이 인상 깊었어 :)" 
+                  class="w-full bg-slate-50 border-2 border-slate-200 focus:border-amber-400 rounded-2xl p-3 text-slate-800 text-sm outline-none resize-none transition custom-scroll leading-relaxed"></textarea>
+      </div>
+
+      <div class="bg-amber-50 rounded-xl p-2.5 text-xs text-amber-900 border border-amber-200 mb-4 flex items-center justify-between">
+        <span class="truncate">보내는 친구: <strong id="writeSenderName" class="text-amber-700 font-bold">나</strong></span>
+        <span class="text-amber-600 text-[11px] whitespace-nowrap ml-2"><i class="fa-solid fa-heart mr-1"></i>정성 가득한 한마디</span>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="closeWriteModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-cute py-2.5 sm:py-3 rounded-2xl transition text-sm sm:text-base">
+          취소
+        </button>
+        <button id="submitFeedbackBtn" onclick="submitFeedback()" class="flex-1 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-cute text-base sm:text-lg py-2.5 sm:py-3 rounded-2xl shadow-md transition active:scale-95">
+          마음 남기기 💕
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 수정 모달 -->
+  <div id="editModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl border-4 border-sky-300 max-h-[92vh] overflow-y-auto custom-scroll relative">
+      <button onclick="closeEditModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
+        ✕
+      </button>
+
+      <div class="text-center mb-4 pr-6">
+        <span class="inline-block px-2.5 py-0.5 bg-sky-100 text-sky-800 text-xs font-bold rounded-full mb-1">소감 수정하기</span>
+        <h3 class="text-xl sm:text-2xl font-cute text-slate-800 truncate">
+          <span id="editTargetAuthorName" class="text-sky-600 underline font-bold">학생이름</span>에게 보낸 마음 고치기
+        </h3>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1.5">1. 감정 이모티콘 변경</label>
+        <div id="editEmojiPickerList" class="grid grid-cols-4 sm:grid-cols-6 gap-2"></div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1.5">2. 이야기 구분 변경</label>
+        <div id="editCategoryCheckboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-sky-50">
+            <input type="checkbox" value="궁금한 점" class="edit-cat-checkbox text-sky-500 rounded w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">🔍 궁금한 점</span>
+          </label>
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-sky-50">
+            <input type="checkbox" value="느낀점" class="edit-cat-checkbox text-sky-500 rounded w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">💭 느낀점</span>
+          </label>
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-sky-50">
+            <input type="checkbox" value="재미있었던 점" class="edit-cat-checkbox text-sky-500 rounded w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">😆 재미있었던 점</span>
+          </label>
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-sky-50">
+            <input type="checkbox" value="공감되었던 점" class="edit-cat-checkbox text-sky-500 rounded w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">🤝 공감되었던 점</span>
+          </label>
+          <label class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs cursor-pointer hover:bg-sky-50">
+            <input type="checkbox" value="기타" class="edit-cat-checkbox text-sky-500 rounded w-4 h-4">
+            <span class="font-medium text-slate-700 truncate">✨ 기타</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-slate-700 mb-1 flex justify-between">
+          <span>3. 수정할 소감 내용</span>
+          <span id="editCharCounter" class="text-slate-400 font-normal">0 / 80자</span>
+        </label>
+        <textarea id="editFeedbackCommentInput" rows="3" maxlength="80" 
+                  oninput="updateEditCharCount(this)"
+                  class="w-full bg-slate-50 border-2 border-slate-200 focus:border-sky-400 rounded-2xl p-3 text-slate-800 text-sm outline-none resize-none transition custom-scroll leading-relaxed"></textarea>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="closeEditModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-cute py-2.5 sm:py-3 rounded-2xl transition text-sm sm:text-base">
+          취소
+        </button>
+        <button onclick="saveEditedFeedback()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white font-cute text-base sm:text-lg py-2.5 sm:py-3 rounded-2xl shadow-md transition active:scale-95">
+          수정 완료 ✨
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 상세보기 모달 -->
+  <div id="detailModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border-4 border-amber-200 max-h-[92vh] flex flex-col relative">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div class="min-w-0 pr-3">
+          <span class="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full inline-block">우리들의 마음 보관함</span>
+          <h3 class="text-lg sm:text-xl md:text-2xl font-cute text-slate-800 mt-0.5 flex items-center gap-1.5 truncate">
+            <span class="flex-shrink-0">📜</span>
+            <span id="detailAuthorTitle" class="text-slate-900 font-bold truncate">'학생이름'의 글</span>
+          </h3>
+        </div>
+        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 text-xl w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition flex-shrink-0">
+          ✕
+        </button>
+      </div>
+
+      <div id="detailEmojiSummary" class="my-2.5 py-2 px-3 bg-slate-50 border border-slate-100 rounded-2xl flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs"></div>
+
+      <div id="detailFeedbackList" class="flex-grow overflow-y-auto custom-scroll space-y-2.5 pr-1 py-1"></div>
+
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+        <button id="modalDirectWriteBtn" onclick="openWriteModalFromDetail()" class="bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-cute text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow transition flex items-center gap-1.5 truncate">
+          <i class="fa-solid fa-pen-nib text-xs"></i>
+          <span>나도 이 글에 소감 남기기</span>
+        </button>
+        <button onclick="closeDetailModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-cute text-xs sm:text-sm px-4 py-2 rounded-xl transition flex-shrink-0">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 비밀번호 확인 모달 -->
+  <div id="teacherAuthModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl border-4 border-indigo-200 text-center relative">
+      <button onclick="closeTeacherAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
+        ✕
+      </button>
+
+      <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-2.5 text-xl">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+
+      <h3 class="text-lg sm:text-xl font-cute text-slate-800 mb-1">선생님 확인</h3>
+      <p class="text-xs text-slate-500 mb-3.5">선생님 비밀번호 4자리를 입력해주세요.</p>
+
+      <div class="space-y-3">
+        <input type="password" id="teacherPasswordInput" maxlength="10" placeholder="비밀번호 입력"
+               onkeyup="if(event.key === 'Enter') checkTeacherPassword()"
+               class="w-full text-center text-xl tracking-widest bg-slate-50 border-2 border-slate-200 focus:border-indigo-400 rounded-2xl p-2.5 outline-none transition font-mono">
+        <button onclick="checkTeacherPassword()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-cute text-sm sm:text-base py-2.5 rounded-2xl shadow transition">
+          관리 모드 열기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 선생님 관리 대시보드 모달 -->
+  <div id="teacherModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border-4 border-indigo-200 max-h-[92vh] overflow-y-auto custom-scroll relative">
+      <button onclick="closeTeacherModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center">
+        ✕
+      </button>
+
+      <div class="flex items-center gap-2 mb-3.5 pr-6">
+        <span class="p-2 bg-indigo-100 text-indigo-700 rounded-2xl text-xl flex-shrink-0">👩‍🏫</span>
+        <div class="min-w-0">
+          <h3 class="text-lg sm:text-xl font-cute text-slate-800 truncate">선생님 관리 공간</h3>
+          <p class="text-xs text-slate-500">학생 명단을 등록하고, 모인 느낀점을 파일로 다운로드합니다.</p>
+        </div>
+      </div>
+
+      <!-- 명단 등록 -->
+      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 sm:p-4 mb-3.5">
+        <h4 class="font-cute text-xs sm:text-sm text-slate-700 mb-1 flex items-center gap-1.5">
+          <i class="fa-solid fa-users text-indigo-500"></i>
+          <span>학생 명단 일괄 등록</span>
+        </h4>
+        <p class="text-[11px] sm:text-xs text-slate-500 mb-2 leading-tight">
+          쉼표(,), 띄어쓰기 또는 줄바꿈으로 학생들의 이름을 넣어주세요.
+        </p>
+        <textarea id="rosterInput" rows="3" placeholder="예: 김하늘, 박서준, 이민지, 정예은, 최시우&#10;강도윤 윤서아 임도현" 
+                  class="w-full bg-white border border-slate-300 focus:border-indigo-400 rounded-xl p-2.5 text-xs sm:text-sm text-slate-800 outline-none resize-none font-mono"></textarea>
+        <div class="flex items-center justify-between mt-2">
+          <button onclick="loadSampleRoster()" class="text-xs text-indigo-600 hover:underline">
+            + 샘플 명단 채우기
+          </button>
+          <button onclick="saveRosterFromInput()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-cute text-xs px-3.5 py-1.5 rounded-xl transition shadow">
+            명단 업데이트 저장
+          </button>
+        </div>
+      </div>
+
+      <!-- 열람 허용 스위치 -->
+      <div class="bg-indigo-50/60 border border-indigo-200 rounded-2xl p-3.5 sm:p-4 mb-3.5">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <h4 class="font-cute text-xs sm:text-sm text-indigo-950 mb-0.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-lock-open text-indigo-600"></i>
+              <span>자신이 받은 소감 열람 허용</span>
+            </h4>
+            <p class="text-[11px] sm:text-xs text-slate-600 leading-tight">
+              켜면 학생들이 자기 글에 친구들이 남긴 소감을 볼 수 있게 됩니다.
+            </p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer ml-2 flex-shrink-0">
+            <input type="checkbox" id="allowOwnFeedbackViewToggle" onchange="toggleReadPermission(this.checked)" class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 전체 모아보기 -->
+      <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-2xl p-3.5 sm:p-4 mb-3.5 shadow-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xl flex-shrink-0">👀</span>
+          <div class="min-w-0">
+            <h4 class="font-cute text-sm sm:text-base text-indigo-950 truncate">전체 학생 느낀점 조회 & 지도 (모아보기)</h4>
+            <p class="text-[11px] sm:text-xs text-slate-600 leading-tight">
+              잠금과 상관없이 모든 글을 한눈에 열람하고, 소감을 수정·삭제·반려합니다.
+            </p>
+          </div>
+        </div>
+        <button onclick="openTeacherFeedbacksDashboard()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-cute text-xs sm:text-sm py-2 px-3 rounded-xl shadow transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-table-cells-large text-xs"></i>
+          <span>전체 학생 화면 형태로 열람 및 관리하기</span>
+        </button>
+      </div>
+
+      <!-- 파일 다운로드 -->
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 sm:p-4 mb-3.5">
+        <h4 class="font-cute text-xs sm:text-sm text-amber-900 mb-0.5 flex items-center gap-1.5">
+          <i class="fa-solid fa-file-export text-amber-600"></i>
+          <span>느낀점 결과 파일 다운로드</span>
+        </h4>
+        <p class="text-[11px] sm:text-xs text-slate-600 mb-2.5 leading-tight">
+          친구들이 작성한 감정 이모티콘과 소감을 한 번에 정리하여 파일로 저장합니다.
+        </p>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-cute text-xs sm:text-sm py-2 px-2.5 rounded-xl shadow transition flex items-center justify-center gap-1 truncate">
+            <i class="fa-solid fa-file-excel text-xs"></i>
+            <span>엑셀(CSV) 저장</span>
+          </button>
+          <button onclick="exportToReportText()" class="bg-amber-600 hover:bg-amber-700 text-white font-cute text-xs sm:text-sm py-2 px-2.5 rounded-xl shadow transition flex items-center justify-center gap-1 truncate">
+            <i class="fa-solid fa-file-lines text-xs"></i>
+            <span>보고서(TXT)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 초기화 -->
+      <div class="border-t border-slate-100 pt-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <span class="text-xs font-bold text-rose-500">소감 데이터 초기화</span>
+            <p class="text-[11px] text-slate-400 truncate">지금까지 작성된 소감만 모두 비웁니다.</p>
+          </div>
+          <button onclick="resetFeedbackData()" class="bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 text-xs px-2.5 py-1.5 rounded-xl font-cute transition flex-shrink-0">
+            소감 전체 비우기
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 알림창 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2 text-xs sm:text-sm transition-all duration-300 opacity-0 pointer-events-none translate-y-3 max-w-[90vw] truncate">
+    <span id="toastIcon" class="flex-shrink-0">✨</span>
+    <span id="toastMessage" class="truncate">알림 내용</span>
+  </div>
+
+  <!-- 푸터 -->
+  <footer class="py-3 text-center text-xs text-slate-400">
+    우마시 (우리들의 마음 나누기) &bull; 초등 국어 &middot; 학급 마음 릴레이 활동
+    <div id="syncStatusIndicator" class="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] text-slate-500 bg-white/70 border border-slate-200 shadow-2xs">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+      <span>클라우드 동기화 확인 중...</span>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      onSnapshot, 
+      serverTimestamp,
+      enableNetwork
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // 사용자의 Firebase 프로젝트 설정
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyFiU-NCoUUUkB2HSzuxkOqpHk98B52cQ",
+      authDomain: "umasi-116cc.firebaseapp.com",
+      projectId: "umasi-116cc",
+      storageBucket: "umasi-116cc.firebasestorage.app",
+      messagingSenderId: "7471683778",
+      appId: "1:7471683778:web:072ac159d428746520c35b",
+      measurementId: "G-1D9WCV0PCF"
+    };
+
+    let db = null;
+    let isCloudOnline = false;
+
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      enableNetwork(db).catch(() => {});
+    } catch (err) {
+      console.warn("Firebase 초기화:", err);
+    }
+
+    const APP_ID = "umasi-class";
+    const SETTINGS_DOC = db ? doc(db, 'artifacts', APP_ID, 'public', 'data', 'settings', 'config') : null;
+    const FEEDBACKS_DOC = db ? doc(db, 'artifacts', APP_ID, 'public', 'data', 'feedbacks', 'all') : null;
+
+    const EMOJI_OPTIONS = [
+      { emoji: '💖', label: '감동이야' },
+      { emoji: '💡', label: '기발해' },
+      { emoji: '👏', label: '멋져최고' },
+      { emoji: '😄', label: '재밌어' },
+      { emoji: '🤝', label: '공감돼' },
+      { emoji: '🌿', label: '따뜻해' },
+      { emoji: '🌈', label: '생생해' },
+      { emoji: '🌟', label: '반짝여' },
+      { emoji: '🥺', label: '뭉클해' },
+      { emoji: '🎨', label: '표현력 짱' },
+      { emoji: '💪', label: '응원해' },
+      { emoji: '🌻', label: '기분좋아' }
+    ];
+
+    const GROWTH_STAGES = [
+      { min: 0,  max: 1,  icon: '🌱', level: 'Lv.1 씨앗',        title: '마음의 씨앗',        desc: '친구들에게 다정한 마음을 선물해 새싹을 틔워보세요!' },
+      { min: 1,  max: 3,  icon: '🌿', level: 'Lv.2 새싹',        title: '파릇파릇 새싹',      desc: '첫 마음을 선물했어요! 친구가 미소 짓고 있어요.' },
+      { min: 3,  max: 5,  icon: '🌷', level: 'Lv.3 꽃봉오리',    title: '두근두근 꽃봉오리',  desc: '따뜻한 마음이 점점 모여 예쁜 꽃을 피우려 해요!' },
+      { min: 5,  max: 8,  icon: '🌸', level: 'Lv.4 활짝 핀 꽃',  title: '활짝 핀 향기로운 꽃', desc: '우리 반에 다정한 마음 향기가 가득 퍼지고 있어요!' },
+      { min: 8,  max: 12, icon: '🌳', level: 'Lv.5 사랑 나무',    title: '든든한 사랑 나무',    desc: '많은 친구들에게 든든하고 큰 힘이 되어주고 있어요!' },
+      { min: 12, max: 999,icon: '🌈✨', level: 'Lv.MAX 무지개 숲',title: '찬란한 무지개 숲',   desc: '최고의 마음 나눔 천사! 반 전체가 따뜻함으로 물들었어요!' }
+    ];
+
+    const state = {
+      currentUser: null,
+      students: [
+        '강민준', '김서아', '김하늘', '박서준', '송지우', 
+        '이민지', '임도현', '정예은', '최시우', '한소율'
+      ],
+      feedbacks: {},
+      selectedTargetAuthor: null,
+      activeEmoji: EMOJI_OPTIONS[0].emoji,
+      activeEmojiLabel: EMOJI_OPTIONS[0].label,
+      allowStudentsToReadOwnFeedbacks: false,
+      editingFeedback: null,
+      isTeacherMode: false
+    };
+
+    const TEACHER_PIN = "0502";
+
+    function updateSyncBadge(online) {
+      const syncEl = document.getElementById('syncStatusIndicator');
+      if (!syncEl) return;
+      if (online) {
+        syncEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span class="text-emerald-700 font-medium">모든 기기 실시간 동기화 중 (정상) 🟢</span>`;
+        syncEl.className = "mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] bg-emerald-50 border border-emerald-300 shadow-2xs";
+      } else {
+        syncEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-amber-800">오프라인 모드 동작 중 🟡</span>`;
+        syncEl.className = "mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] bg-amber-50 border border-amber-300 shadow-2xs";
+      }
+    }
+
+    function initCloudSync() {
+      renderRosterDropdown();
+      updatePermissionIndicator();
+      renderDashboard();
+
+      if (!db || !SETTINGS_DOC || !FEEDBACKS_DOC) {
+        updateSyncBadge(false);
+        return;
+      }
+
+      // 1. 학생 명단 및 열람 권한 실시간 구독
+      onSnapshot(SETTINGS_DOC, (docSnap) => {
+        isCloudOnline = true;
+        updateSyncBadge(true);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (Array.isArray(data.students) && data.students.length > 0) {
+            state.students = data.students;
+            renderRosterDropdown();
+          }
+          if (typeof data.allowOwnFeedbackView === 'boolean') {
+            state.allowStudentsToReadOwnFeedbacks = data.allowOwnFeedbackView;
+            updatePermissionIndicator();
+          }
+          renderDashboard();
+        } else {
+          saveSettingsToCloud();
+        }
+      }, (err) => {
+        console.warn("설정 동기화 알림:", err.message);
+        updateSyncBadge(false);
+      });
+
+      // 2. 소감 전체 데이터 실시간 구독
+      onSnapshot(FEEDBACKS_DOC, (docSnap) => {
+        isCloudOnline = true;
+        updateSyncBadge(true);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.payload) {
+            try {
+              state.feedbacks = JSON.parse(data.payload);
+            } catch (e) {
+              state.feedbacks = data.feedbacks || {};
+            }
+          } else if (data.feedbacks) {
+            state.feedbacks = data.feedbacks;
+          }
+          renderDashboard();
+          if (state.selectedTargetAuthor && !document.getElementById('detailModal').classList.contains('hidden')) {
+            openDetailModal(state.selectedTargetAuthor);
+          }
+        } else {
+          saveFeedbacksToCloud();
+        }
+      }, (err) => {
+        console.warn("소감 동기화 알림:", err.message);
+        updateSyncBadge(false);
+      });
+    }
+
+    async function saveSettingsToCloud() {
+      if (!db || !SETTINGS_DOC) return;
+      try {
+        await setDoc(SETTINGS_DOC, {
+          students: state.students,
+          allowOwnFeedbackView: state.allowStudentsToReadOwnFeedbacks,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch (e) {
+        console.warn("설정 클라우드 전송:", e.message);
+      }
+    }
+
+    async function saveFeedbacksToCloud() {
+      if (!db || !FEEDBACKS_DOC) return;
+      try {
+        await setDoc(FEEDBACKS_DOC, {
+          payload: JSON.stringify(state.feedbacks),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      } catch (e) {
+        console.warn("소감 클라우드 전송:", e.message);
+      }
+    }
+
+    window.promptTeacherAuth = function() {
+      const input = document.getElementById('teacherPasswordInput');
+      input.value = '';
+      document.getElementById('teacherAuthModal').classList.remove('hidden');
+      setTimeout(() => input.focus(), 100);
+    };
+
+    window.closeTeacherAuthModal = function() {
+      document.getElementById('teacherAuthModal').classList.add('hidden');
+    };
+
+    window.checkTeacherPassword = function() {
+      const entered = document.getElementById('teacherPasswordInput').value.trim();
+      if (entered === TEACHER_PIN) {
+        closeTeacherAuthModal();
+        openTeacherModal();
+        showToast('선생님 관리 모드가 열렸습니다.', '👩‍🏫');
+      } else {
+        showToast('비밀번호가 올바르지 않습니다!', '🔒');
+        const input = document.getElementById('teacherPasswordInput');
+        input.value = '';
+        input.focus();
+      }
+    };
+
+    window.toggleReadPermission = async function(allowed) {
+      state.allowStudentsToReadOwnFeedbacks = allowed;
+      updatePermissionIndicator();
+      renderDashboard();
+      await saveSettingsToCloud();
+      showToast(
+        allowed 
+          ? '선생님이 [자신이 받은 소감 열람]을 허용했습니다! 🎉' 
+          : '선생님이 소감 열람을 대기(잠금)로 변경했습니다. 🔒',
+        allowed ? '🔓' : '🔒'
+      );
+    };
+
+    function updatePermissionIndicator() {
+      const indicator = document.getElementById('readPermissionIndicator');
+      if (state.allowStudentsToReadOwnFeedbacks) {
+        indicator.textContent = '내 글 확인: 열람 허용 🔓';
+        indicator.className = 'px-2.5 py-1 rounded-xl font-medium text-xs border bg-emerald-100 text-emerald-800 border-emerald-300';
+      } else {
+        indicator.textContent = '내 글 확인: 활동 중(잠금) 🔒';
+        indicator.className = 'px-2.5 py-1 rounded-xl font-medium text-xs border bg-amber-100 text-amber-800 border-amber-300';
+      }
+      const toggle = document.getElementById('allowOwnFeedbackViewToggle');
+      if (toggle) toggle.checked = state.allowStudentsToReadOwnFeedbacks;
+    }
+
+    let toastTimeout;
+    function showToast(message, icon = '✨') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMessage');
+      const toastIco = document.getElementById('toastIcon');
+      
+      toastMsg.textContent = message;
+      toastIco.textContent = icon;
+      
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-3');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-3');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2500);
+    }
+    window.showToast = showToast;
+
+    window.handleStudentLogin = async function() {
+      const manualName = document.getElementById('manualNameInput').value.trim();
+      const selectedName = document.getElementById('studentSelectDropdown').value.trim();
+      const finalName = manualName || selectedName;
+
+      if (!finalName) {
+        showToast('이름을 선택하거나 직접 적어주세요!', '🔔');
+        return;
+      }
+
+      state.currentUser = finalName;
+
+      if (!state.students.includes(finalName)) {
+        state.students.push(finalName);
+        renderRosterDropdown();
+        await saveSettingsToCloud();
+      }
+
+      document.getElementById('currentUserNameText').textContent = `${state.currentUser} 학생`;
+      document.getElementById('currentUserBadge').classList.remove('hidden');
+      document.getElementById('currentUserBadge').classList.add('flex');
+
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('dashboardScreen').classList.remove('hidden');
+
+      renderDashboard();
+      showToast(`${state.currentUser}님 환영해요! 친구들의 글을 둘러보세요.`, '🎉');
+    };
+
+    window.syncSelectedName = function(val) {
+      if (val) {
+        document.getElementById('manualNameInput').value = val;
+      }
+    };
+
+    window.logoutStudent = function() {
+      state.currentUser = null;
+      document.getElementById('manualNameInput').value = '';
+      document.getElementById('studentSelectDropdown').value = '';
+      document.getElementById('currentUserBadge').classList.add('hidden');
+      document.getElementById('currentUserBadge').classList.remove('flex');
+
+      document.getElementById('dashboardScreen').classList.add('hidden');
+      document.getElementById('loginScreen').classList.remove('hidden');
+      showToast('로그아웃 되었습니다. 다른 이름으로 입장할 수 있어요.', '👋');
+    };
+
+    window.navigateHome = function() {
+      if (state.currentUser) {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('dashboardScreen').classList.remove('hidden');
+      } else {
+        document.getElementById('dashboardScreen').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+      }
+    };
+
+    function renderRosterDropdown() {
+      const select = document.getElementById('studentSelectDropdown');
+      select.innerHTML = '<option value="">-- 내 이름을 찾아보세요 --</option>';
+      
+      state.students.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+
+      document.getElementById('currentListCount').textContent = state.students.length;
+      const rosterInput = document.getElementById('rosterInput');
+      if (rosterInput) rosterInput.value = state.students.join(', ');
+    }
+
+    window.openTeacherModal = function() {
+      document.getElementById('rosterInput').value = state.students.join(', ');
+      document.getElementById('teacherModal').classList.remove('hidden');
+    };
+
+    window.closeTeacherModal = function() {
+      document.getElementById('teacherModal').classList.add('hidden');
+    };
+
+    window.saveRosterFromInput = async function() {
+      const raw = document.getElementById('rosterInput').value;
+      const list = raw
+        .split(/[\n, ]+/)
+        .map(n => n.trim())
+        .filter(n => n.length > 0);
+
+      const uniqueList = [...new Set(list)];
+
+      if (uniqueList.length === 0) {
+        showToast('한 명 이상의 학생 이름을 입력해주세요.', '⚠️');
+        return;
+      }
+
+      state.students = uniqueList;
+      renderRosterDropdown();
+      renderDashboard();
+      closeTeacherModal();
+      
+      await saveSettingsToCloud();
+      showToast(`학생 명단 ${uniqueList.length}명이 실시간 저장되었습니다!`, '✅');
+    };
+
+    window.loadSampleRoster = function() {
+      const samples = ['강민준', '김서아', '김하늘', '박서준', '송지우', '이민지', '임도현', '정예은', '최시우', '한소율'];
+      document.getElementById('rosterInput').value = samples.join(', ');
+    };
+
+    window.openTeacherFeedbacksDashboard = function() {
+      closeTeacherModal();
+      state.isTeacherMode = true;
+
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('dashboardScreen').classList.remove('hidden');
+      document.getElementById('teacherViewBanner').classList.remove('hidden');
+
+      renderDashboard();
+      showToast('선생님 모드: 전체 학생의 글과 소감을 열람하고 지도합니다.', '👩‍🏫');
+    };
+
+    window.exitTeacherFeedbacksView = function() {
+      state.isTeacherMode = false;
+      document.getElementById('teacherViewBanner').classList.add('hidden');
+      
+      if (!state.currentUser) {
+        document.getElementById('dashboardScreen').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+      } else {
+        renderDashboard();
+      }
+      showToast('선생님 뷰를 종료했습니다.', '👋');
+    };
+
+    function renderDashboard() {
+      const grid = document.getElementById('articlesGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      let totalFeedbackCount = 0;
+
+      state.students.forEach(studentName => {
+        const feedbackList = state.feedbacks[studentName] || [];
+        totalFeedbackCount += feedbackList.length;
+
+        const isSelf = (!state.isTeacherMode) && (state.currentUser === studentName);
+        const previewEmojis = feedbackList.slice(0, 4).map(f => f.emoji).join(' ');
+        const isLockedForSelf = isSelf && !state.allowStudentsToReadOwnFeedbacks;
+
+        const card = document.createElement('div');
+        card.className = `group bg-white rounded-3xl p-4 sm:p-5 border-2 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col justify-between cursor-pointer ${
+          state.isTeacherMode 
+            ? 'border-indigo-200 hover:border-indigo-400 bg-indigo-50/15' 
+            : (isSelf ? 'border-amber-400 bg-amber-50/40' : 'border-slate-200 hover:border-amber-300')
+        }`;
+        
+        card.onclick = (e) => {
+          if (e.target.closest('button')) return;
+          openDetailModal(studentName);
+        };
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between mb-2.5">
+              <div class="min-w-0 pr-1">
+                <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+                  state.isTeacherMode
+                    ? 'bg-indigo-100 text-indigo-800'
+                    : (isSelf ? 'bg-amber-200 text-amber-900' : 'bg-slate-100 text-slate-600')
+                }">
+                  ${state.isTeacherMode ? '👩‍🏫 지도 대상' : (isSelf ? '✨ 나의 글 (내 자리)' : '📄 종이 인쇄물')}
+                </span>
+                <h4 class="text-lg sm:text-xl font-cute text-slate-800 mt-1 flex items-center gap-1.5 truncate">
+                  <span>'${studentName}'의 글</span>
+                </h4>
+              </div>
+              <span class="text-2xl opacity-80 group-hover:scale-110 transition transform flex-shrink-0">
+                ${state.isTeacherMode ? '🔍' : (isLockedForSelf ? '🔒' : (feedbackList.length > 0 ? '📬' : '📭'))}
+              </span>
+            </div>
+
+            <div class="bg-slate-50 rounded-2xl p-2.5 mb-2.5 border border-slate-100 flex items-center justify-between gap-1.5">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="text-xs font-bold text-slate-500 whitespace-nowrap">받은 마음:</span>
+                <span class="text-sm tracking-wide truncate">
+                  ${
+                    isLockedForSelf 
+                      ? '<span class="text-xs text-amber-700 font-medium">선생님 확인 후 공개 🎁</span>' 
+                      : (previewEmojis || '<span class="text-xs text-slate-400">소감 대기 중</span>')
+                  }
+                </span>
+              </div>
+              <span class="bg-white px-2 py-0.5 rounded-lg border border-slate-200 text-xs font-bold flex-shrink-0 ${state.isTeacherMode ? 'text-indigo-600' : 'text-amber-600'}">
+                ${feedbackList.length}개
+              </span>
+            </div>
+
+            <div class="min-h-[42px] text-xs flex items-center justify-center text-center">
+              ${
+                state.isTeacherMode
+                  ? `<div class="w-full bg-indigo-50/80 p-2 rounded-xl border border-indigo-200 text-indigo-800 font-medium flex items-center justify-center gap-1 text-[11px] sm:text-xs">
+                       <i class="fa-solid fa-list-check flex-shrink-0"></i>
+                       <span class="truncate">소감 열람 및 수정·삭제·반려 가능</span>
+                     </div>`
+                  : (isLockedForSelf
+                      ? `<div class="w-full bg-amber-50/80 p-2 rounded-xl border border-amber-200 text-amber-800 font-medium text-[11px] sm:text-xs truncate">
+                           🔒 활동이 끝나면 선생님이 열어줄 거예요!
+                         </div>`
+                      : (feedbackList.length > 0 
+                          ? `<div class="w-full bg-slate-50 p-2 rounded-xl border border-slate-200 text-slate-500 flex items-center justify-center gap-1 text-[11px] sm:text-xs">
+                               <i class="fa-solid fa-envelope-open-text text-amber-500 flex-shrink-0"></i>
+                               <span class="truncate">카드를 눌러 친구들의 소감을 확인하세요!</span>
+                             </div>`
+                          : `<p class="text-slate-400 italic py-1.5 text-xs truncate">인쇄 글을 읽고 첫 마음을 선물해보세요!</p>`))
+              }
+            </div>
+          </div>
+
+          <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-1.5">
+            <button onclick="openDetailModal('${studentName}')" 
+                    class="text-xs font-bold text-slate-600 hover:text-indigo-700 flex items-center gap-1 py-1.5 px-2 rounded-lg hover:bg-slate-100 transition whitespace-nowrap">
+              <i class="fa-solid fa-expand text-slate-400 text-xs"></i> <span>${isLockedForSelf ? '🔒 확인' : '크게보기'}</span>
+            </button>
+
+            ${
+              state.isTeacherMode ? `
+                <button onclick="openDetailModal('${studentName}')" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-cute text-xs py-1.5 px-3 rounded-xl shadow-sm transition flex items-center gap-1 whitespace-nowrap">
+                  <i class="fa-solid fa-sliders text-xs"></i>
+                  <span>소감 관리</span>
+                </button>
+              ` : (
+                !isSelf ? `
+                  <button onclick="openWriteModal('${studentName}')" 
+                          class="bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500 text-white font-cute text-xs py-1.5 px-3 rounded-xl shadow-sm transition active:scale-95 flex items-center gap-1 whitespace-nowrap">
+                    <i class="fa-solid fa-heart text-xs"></i>
+                    <span>느낀점 쓰기</span>
+                  </button>
+                ` : `
+                  <span class="text-[11px] text-amber-700 font-medium py-1 px-1.5 whitespace-nowrap">도착하는 중 😊</span>
+                `
+              )
+            }
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+
+      document.getElementById('statTotalStudents').textContent = state.students.length;
+      document.getElementById('statTotalFeedbacks').textContent = totalFeedbackCount;
+
+      updateGrowthVisualizer(totalFeedbackCount);
+    }
+    window.renderDashboard = renderDashboard;
+
+    function updateGrowthVisualizer(totalFeedbackCount) {
+      if (!state.currentUser) return;
+
+      let mySentCount = 0;
+      Object.values(state.feedbacks).forEach(fbList => {
+        fbList.forEach(fb => {
+          if (fb.from === state.currentUser) {
+            mySentCount++;
+          }
+        });
+      });
+
+      let currentStage = GROWTH_STAGES[0];
+      for (let i = 0; i < GROWTH_STAGES.length; i++) {
+        if (mySentCount >= GROWTH_STAGES[i].min) {
+          currentStage = GROWTH_STAGES[i];
+        }
+      }
+
+      document.getElementById('myLevelBadge').textContent = currentStage.level;
+      document.getElementById('myGrowthIcon').textContent = currentStage.icon;
+      document.getElementById('myGrowthTitle').textContent = currentStage.title;
+      document.getElementById('myGrowthDescription').textContent = currentStage.desc;
+      document.getElementById('myFeedbackCountText').textContent = `${mySentCount}개`;
+
+      const progressBar = document.getElementById('myGrowthProgressBar');
+      const nextLevelText = document.getElementById('myNextLevelText');
+
+      if (currentStage.max === 999) {
+        progressBar.style.width = '100%';
+        nextLevelText.textContent = '🎉 모든 성장 단계를 달성했어요!';
+      } else {
+        const stageProgress = (mySentCount - currentStage.min) / (currentStage.max - currentStage.min);
+        const percent = Math.min(100, Math.max(0, Math.round(stageProgress * 100)));
+        progressBar.style.width = `${percent}%`;
+        const remain = currentStage.max - mySentCount;
+        nextLevelText.textContent = `다음 단계까지 ${remain}개 남았어요!`;
+      }
+
+      const classTarget = Math.max(10, state.students.length * 2);
+      const classPercent = Math.min(100, Math.round((totalFeedbackCount / classTarget) * 100));
+
+      document.getElementById('classForestLevelBadge').textContent = `울창도 ${classPercent}% (${totalFeedbackCount}/${classTarget})`;
+      document.getElementById('classForestProgressBar').style.width = `${classPercent}%`;
+
+      const forestIconEl = document.getElementById('classForestIcon');
+      const forestTitleEl = document.getElementById('classForestTitle');
+      const forestDescEl = document.getElementById('classForestDescription');
+
+      if (classPercent < 25) {
+        forestIconEl.textContent = '🏡🌱';
+        forestTitleEl.textContent = '싹트는 작은 정원';
+        forestDescEl.textContent = '친구들의 따뜻한 마음들이 모이기 시작했어요!';
+      } else if (classPercent < 60) {
+        forestIconEl.textContent = '🏡🌿🌷';
+        forestTitleEl.textContent = '꽃피는 우리 반 숲길';
+        forestDescEl.textContent = '여기저기 다정한 칭찬과 꽃이 피어나고 있어요.';
+      } else if (classPercent < 90) {
+        forestIconEl.textContent = '🌳🌸🌳';
+        forestTitleEl.textContent = '풍성한 우리들의 사랑 숲';
+        forestDescEl.textContent = '서로를 향한 따뜻한 마음이 가득 들어찼어요!';
+      } else {
+        forestIconEl.textContent = '🏰🌈🌲💖';
+        forestTitleEl.textContent = '환상적인 마음 원더랜드';
+        forestDescEl.textContent = '온 교실이 서로를 응원하는 사랑과 감동으로 빛나요!';
+      }
+    }
+
+    function setupEmojiPicker() {
+      const container = document.getElementById('emojiPickerList');
+      container.innerHTML = '';
+
+      EMOJI_OPTIONS.forEach((item, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `emoji-btn flex flex-col items-center justify-center p-2 rounded-2xl border-2 transition transform active:scale-90 ${
+          index === 0 ? 'border-amber-400 bg-amber-50 shadow-sm' : 'border-slate-200 hover:border-amber-300 bg-white'
+        }`;
+        btn.innerHTML = `
+          <span class="text-2xl">${item.emoji}</span>
+          <span class="text-[11px] font-medium text-slate-600 mt-1">${item.label}</span>
+        `;
+        btn.onclick = () => selectEmoji(item.emoji, item.label, btn);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectEmoji(emoji, label, clickedBtn) {
+      state.activeEmoji = emoji;
+      state.activeEmojiLabel = label;
+
+      document.querySelectorAll('.emoji-btn').forEach(btn => {
+        btn.classList.remove('border-amber-400', 'bg-amber-50', 'shadow-sm');
+        btn.classList.add('border-slate-200', 'bg-white');
+      });
+
+      clickedBtn.classList.remove('border-slate-200', 'bg-white');
+      clickedBtn.classList.add('border-amber-400', 'bg-amber-50', 'shadow-sm');
+    }
+
+    window.openWriteModal = function(targetAuthor) {
+      if (!state.currentUser) {
+        showToast('먼저 이름을 입력하고 입장해주세요!', '⚠️');
+        return;
+      }
+
+      state.selectedTargetAuthor = targetAuthor;
+      document.getElementById('writeTargetAuthorName').textContent = targetAuthor;
+      document.getElementById('writeSenderName').textContent = state.currentUser;
+      document.getElementById('feedbackCommentInput').value = '';
+      document.getElementById('charCounter').textContent = '0 / 80자';
+
+      document.querySelectorAll('.cat-checkbox').forEach(cb => {
+        cb.checked = (cb.value === '느낀점');
+      });
+
+      const firstBtn = document.querySelectorAll('.emoji-btn')[0];
+      if (firstBtn) selectEmoji(EMOJI_OPTIONS[0].emoji, EMOJI_OPTIONS[0].label, firstBtn);
+
+      document.getElementById('writeModal').classList.remove('hidden');
+      setTimeout(() => {
+        document.getElementById('feedbackCommentInput').focus();
+      }, 100);
+    };
+
+    window.closeWriteModal = function() {
+      document.getElementById('writeModal').classList.add('hidden');
+      state.selectedTargetAuthor = null;
+    };
+
+    window.updateCharCount = function(el) {
+      document.getElementById('charCounter').textContent = `${el.value.length} / 80자`;
+    };
+
+    window.submitFeedback = async function() {
+      const comment = document.getElementById('feedbackCommentInput').value.trim();
+      const target = state.selectedTargetAuthor;
+
+      const selectedCategories = [];
+      document.querySelectorAll('.cat-checkbox:checked').forEach(cb => {
+        selectedCategories.push(cb.value);
+      });
+
+      if (selectedCategories.length === 0) {
+        showToast('적어도 하나 이상의 항목을 체크해주세요!', '☑️');
+        return;
+      }
+
+      if (!comment) {
+        showToast('친구에게 남길 소감을 적어주세요!', '✏️');
+        return;
+      }
+
+      if (!state.feedbacks[target]) {
+        state.feedbacks[target] = [];
+      }
+
+      const newFeedback = {
+        id: 'fb-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        from: state.currentUser,
+        emoji: state.activeEmoji,
+        label: state.activeEmojiLabel,
+        categories: selectedCategories,
+        comment: comment,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      state.feedbacks[target].push(newFeedback);
+
+      closeWriteModal();
+      renderDashboard();
+      
+      await saveFeedbacksToCloud();
+      showToast(`'${target}' 친구에게 마음이 전달되었어요!`, '💖');
+
+      checkLevelUpCelebration();
+
+      if (!document.getElementById('detailModal').classList.contains('hidden')) {
+        openDetailModal(target);
+      }
+    };
+
+    function checkLevelUpCelebration() {
+      let mySentCount = 0;
+      Object.values(state.feedbacks).forEach(fbList => {
+        fbList.forEach(fb => {
+          if (fb.from === state.currentUser) mySentCount++;
+        });
+      });
+
+      const stage = GROWTH_STAGES.find(s => s.min === mySentCount);
+      if (stage && mySentCount > 0) {
+        setTimeout(() => {
+          showToast(`와우! 내 마음 나무가 [${stage.title}] 단계로 성장했어요! ${stage.icon}`, '🌟');
+        }, 1200);
+      }
+    }
+
+    window.openDetailModal = function(targetAuthor) {
+      state.selectedTargetAuthor = targetAuthor;
+      document.getElementById('detailAuthorTitle').textContent = `'${targetAuthor}'의 글`;
+
+      const listContainer = document.getElementById('detailFeedbackList');
+      const summaryContainer = document.getElementById('detailEmojiSummary');
+      const directWriteBtn = document.getElementById('modalDirectWriteBtn');
+      const list = state.feedbacks[targetAuthor] || [];
+
+      const isSelf = state.currentUser === targetAuthor;
+      const isLockedForSelf = isSelf && !state.allowStudentsToReadOwnFeedbacks;
+      const canView = state.isTeacherMode || !isLockedForSelf;
+
+      if (isSelf || state.isTeacherMode) {
+        directWriteBtn.classList.add('hidden');
+      } else {
+        directWriteBtn.classList.remove('hidden');
+      }
+
+      if (!canView) {
+        summaryContainer.innerHTML = `<span class="text-amber-800 font-medium">🔒 선생님의 열람 허용 대기 중입니다.</span>`;
+        listContainer.innerHTML = `
+          <div class="text-center py-16 px-4 bg-amber-50/50 rounded-2xl border border-amber-200">
+            <span class="text-6xl block mb-3 animate-gentle">🎁</span>
+            <h4 class="text-xl font-cute text-amber-900 mb-1">두근두근! 친구들의 소감이 모이고 있어요</h4>
+            <p class="text-sm text-slate-600 max-w-md mx-auto mt-2">
+              활동 시간이 끝난 후 <strong>선생님이 열람을 허용</strong>해주시면 친구들이 남겨준 감정 이모티콘과 소감을 모두 확인할 수 있어요! 조금만 기다려주세요 😊
+            </p>
+            <div class="mt-4 inline-block bg-white px-4 py-1.5 rounded-full border border-amber-300 text-xs font-bold text-amber-700">
+              현재 도착한 소감: ${list.length}개
+            </div>
+          </div>
+        `;
+        document.getElementById('detailModal').classList.remove('hidden');
+        return;
+      }
+
+      if (list.length === 0) {
+        summaryContainer.innerHTML = `<span class="text-slate-400">아직 도착한 마음이 없어요.</span>`;
+      } else {
+        const counts = {};
+        list.forEach(item => {
+          counts[item.emoji] = (counts[item.emoji] || 0) + 1;
+        });
+
+        summaryContainer.innerHTML = `
+          <span class="font-bold text-slate-700 mr-1">모인 감정:</span>
+          ${Object.entries(counts).map(([em, cnt]) => `
+            <span class="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl border border-slate-200 font-bold text-slate-700">
+              <span>${em}</span>
+              <span class="text-amber-600">${cnt}</span>
+            </span>
+          `).join('')}
+          <span class="text-slate-400 ml-auto font-medium">총 ${list.length}개의 응원</span>
+        `;
+      }
+
+      if (list.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-12 text-slate-400">
+            <span class="text-5xl block mb-2">💌</span>
+            <p class="text-base font-cute text-slate-600">아직 친구들이 남긴 소감이 없어요</p>
+            <p class="text-xs text-slate-400 mt-1">인쇄된 글을 읽고 제일 먼저 응원과 느낀점을 남겨보세요!</p>
+          </div>
+        `;
+      } else {
+        listContainer.innerHTML = '';
+        list.slice().reverse().forEach(fb => {
+          const itemDiv = document.createElement('div');
+          const isRejected = fb.status === 'rejected';
+          itemDiv.className = `border-2 rounded-2xl p-4 transition shadow-sm ${
+            isRejected 
+              ? 'bg-rose-50/70 border-rose-300' 
+              : 'bg-slate-50 border-slate-100 hover:border-amber-200'
+          }`;
+          
+          const isMyFeedback = state.currentUser === fb.from;
+          const hasEditPermission = isMyFeedback || state.isTeacherMode;
+
+          const categoryBadges = (fb.categories || ['느낀점']).map(cat => `
+            <span class="text-[11px] font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+              #${cat}
+            </span>
+          `).join(' ');
+
+          itemDiv.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl p-1.5 bg-white rounded-xl shadow-xs border border-slate-100">${fb.emoji}</span>
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-sm font-bold text-slate-800">${fb.from} 친구</span>
+                    ${isMyFeedback ? '<span class="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold">내가 쓴 글</span>' : ''}
+                    ${isRejected ? '<span class="text-[10px] bg-rose-200 text-rose-900 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5"><i class="fa-solid fa-triangle-exclamation"></i>선생님 반려</span>' : ''}
+                  </div>
+                  <div class="flex flex-wrap items-center gap-1 mt-0.5">
+                    <span class="text-[11px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                      ${fb.label}
+                    </span>
+                    ${categoryBadges}
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400 font-mono">${fb.timestamp}</span>
+                ${
+                  hasEditPermission ? `
+                    <div class="flex items-center gap-1 border-l pl-2 border-slate-200">
+                      ${
+                        state.isTeacherMode ? `
+                          <button onclick="toggleRejectFeedback('${targetAuthor}', '${fb.id}')" 
+                                  title="${isRejected ? '반려 취소' : '반려하기'}" 
+                                  class="px-2 py-1 text-xs rounded-lg transition font-cute flex items-center gap-1 ${
+                                    isRejected 
+                                      ? 'bg-rose-600 text-white hover:bg-rose-700' 
+                                      : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                                  }">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>${isRejected ? '반려취소' : '반려'}</span>
+                          </button>
+                        ` : ''
+                      }
+                      <button onclick="openEditModal('${targetAuthor}', '${fb.id}')" title="수정하기" class="p-1.5 text-slate-400 hover:text-sky-600 rounded-lg hover:bg-sky-50 transition">
+                        <i class="fa-solid fa-pen text-xs"></i>
+                      </button>
+                      <button onclick="confirmDeleteFeedback('${targetAuthor}', '${fb.id}')" title="삭제하기" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                      </button>
+                    </div>
+                  ` : ''
+                }
+              </div>
+            </div>
+
+            ${
+              isRejected ? `
+                <div class="mb-2 p-2 bg-rose-100/80 rounded-xl text-xs text-rose-800 border border-rose-200 flex items-center gap-1.5">
+                  <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
+                  <span><strong>선생님 지도 안내:</strong> 친구에게 더 알맞고 다정한 말로 다시 작성해보도록 반려 처리된 글입니다.</span>
+                </div>
+              ` : ''
+            }
+
+            <div class="bg-white p-3 rounded-xl border border-slate-100 text-slate-800 text-sm leading-relaxed mt-1 ${isRejected ? 'line-through text-slate-400' : ''}">
+              ${escapeHtml(fb.comment)}
+            </div>
+          `;
+          listContainer.appendChild(itemDiv);
+        });
+      }
+
+      document.getElementById('detailModal').classList.remove('hidden');
+    };
+
+    window.toggleRejectFeedback = async function(targetAuthor, feedbackId) {
+      const list = state.feedbacks[targetAuthor] || [];
+      const item = list.find(f => f.id === feedbackId);
+      if (!item) return;
+
+      if (item.status === 'rejected') {
+        item.status = 'normal';
+        showToast(`'${item.from}' 학생의 글이 정상으로 복구되었습니다.`, '✅');
+      } else {
+        item.status = 'rejected';
+        showToast(`'${item.from}' 학생의 소감이 반려 처리되었습니다.`, '⚠️');
+      }
+
+      renderDashboard();
+      openDetailModal(targetAuthor);
+      await saveFeedbacksToCloud();
+    };
+
+    let currentEditData = null;
+
+    window.openEditModal = function(targetAuthor, feedbackId) {
+      const list = state.feedbacks[targetAuthor] || [];
+      const item = list.find(f => f.id === feedbackId);
+      if (!item) return;
+
+      currentEditData = {
+        targetAuthor: targetAuthor,
+        feedbackId: feedbackId,
+        emoji: item.emoji,
+        label: item.label
+      };
+
+      document.getElementById('editTargetAuthorName').textContent = targetAuthor;
+      document.getElementById('editFeedbackCommentInput').value = item.comment;
+      document.getElementById('editCharCounter').textContent = `${item.comment.length} / 80자`;
+
+      const curCats = item.categories || ['느낀점'];
+      document.querySelectorAll('.edit-cat-checkbox').forEach(cb => {
+        cb.checked = curCats.includes(cb.value);
+      });
+
+      setupEditEmojiPicker(item.emoji);
+
+      document.getElementById('editModal').classList.remove('hidden');
+    };
+
+    function setupEditEmojiPicker(selectedEmoji) {
+      const container = document.getElementById('editEmojiPickerList');
+      container.innerHTML = '';
+
+      EMOJI_OPTIONS.forEach(item => {
+        const isSelected = item.emoji === selectedEmoji;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `edit-emoji-btn flex flex-col items-center justify-center p-2 rounded-2xl border-2 transition transform active:scale-90 ${
+          isSelected ? 'border-sky-400 bg-sky-50 shadow-sm' : 'border-slate-200 hover:border-sky-300 bg-white'
+        }`;
+        btn.innerHTML = `
+          <span class="text-2xl">${item.emoji}</span>
+          <span class="text-[11px] font-medium text-slate-600 mt-1">${item.label}</span>
+        `;
+        btn.onclick = () => {
+          currentEditData.emoji = item.emoji;
+          currentEditData.label = item.label;
+          document.querySelectorAll('.edit-emoji-btn').forEach(b => {
+            b.classList.remove('border-sky-400', 'bg-sky-50', 'shadow-sm');
+            b.classList.add('border-slate-200', 'bg-white');
+          });
+          btn.classList.remove('border-slate-200', 'bg-white');
+          btn.classList.add('border-sky-400', 'bg-sky-50', 'shadow-sm');
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    window.updateEditCharCount = function(el) {
+      document.getElementById('editCharCounter').textContent = `${el.value.length} / 80자`;
+    };
+
+    window.closeEditModal = function() {
+      document.getElementById('editModal').classList.add('hidden');
+      currentEditData = null;
+    };
+
+    window.saveEditedFeedback = async function() {
+      if (!currentEditData) return;
+      const target = currentEditData.targetAuthor;
+      const fId = currentEditData.feedbackId;
+
+      const comment = document.getElementById('editFeedbackCommentInput').value.trim();
+      if (!comment) {
+        showToast('소감 내용을 비워둘 수 없습니다.', '✏️');
+        return;
+      }
+
+      const selectedCats = [];
+      document.querySelectorAll('.edit-cat-checkbox:checked').forEach(cb => {
+        selectedCats.push(cb.value);
+      });
+
+      if (selectedCats.length === 0) {
+        showToast('적어도 하나 이상의 항목을 체크해주세요!', '☑️');
+        return;
+      }
+
+      const list = state.feedbacks[target] || [];
+      const item = list.find(f => f.id === fId);
+      if (item) {
+        item.emoji = currentEditData.emoji;
+        item.label = currentEditData.label;
+        item.categories = selectedCats;
+        item.comment = comment;
+        item.timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + 
+          (state.isTeacherMode ? ' (선생님 수정)' : ' (수정됨)');
+      }
+
+      closeEditModal();
+      renderDashboard();
+      openDetailModal(target);
+      
+      await saveFeedbacksToCloud();
+      showToast('소감이 수정되었습니다! ✨', '✅');
+    };
+
+    window.confirmDeleteFeedback = async function(targetAuthor, feedbackId) {
+      const list = state.feedbacks[targetAuthor] || [];
+      state.feedbacks[targetAuthor] = list.filter(f => f.id !== feedbackId);
+
+      renderDashboard();
+      openDetailModal(targetAuthor);
+      await saveFeedbacksToCloud();
+      showToast(state.isTeacherMode ? '선생님 권한으로 소감이 삭제되었습니다.' : '소감이 삭제되었습니다.', '🗑️');
+    };
+
+    window.closeDetailModal = function() {
+      document.getElementById('detailModal').classList.add('hidden');
+    };
+
+    window.openWriteModalFromDetail = function() {
+      const author = state.selectedTargetAuthor;
+      closeDetailModal();
+      openWriteModal(author);
+    };
+
+    window.exportToCSV = function() {
+      let csvContent = '\uFEFF';
+      csvContent += '글 쓴 친구,보낸 친구,이모티콘,느낌 구분,선택한 항목(구분),남긴 소감(느낀점),작성 시간\n';
+
+      let rowCount = 0;
+      state.students.forEach(student => {
+        const list = state.feedbacks[student] || [];
+        list.forEach(fb => {
+          rowCount++;
+          const safeComment = `"${fb.comment.replace(/"/g, '""')}"`;
+          const cats = `"${(fb.categories || ['느낀점']).join(', ')}"`;
+          csvContent += `"${student}의 글","${fb.from}","${fb.emoji}","${fb.label}",${cats},${safeComment},"${fb.timestamp}"\n`;
+        });
+      });
+
+      if (rowCount === 0) {
+        showToast('아직 작성된 느낀점이 없어요.', 'ℹ️');
+        return;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      downloadFile(csvContent, `우마시_마음나누기_결과_${today}.csv`, 'text/csv;charset=utf-8;');
+      showToast('엑셀(CSV) 파일로 저장되었습니다!', '📥');
+    };
+
+    window.exportToReportText = function() {
+      const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+      let text = `==============================================\n`;
+      text += ` [우마시] 우리들의 마음 나누기 - 활동 결과 보고서\n`;
+      text += ` 날짜: ${today}\n`;
+      text += ` 총 학생 수: ${state.students.length}명\n`;
+      text += `==============================================\n\n`;
+
+      let totalCount = 0;
+
+      state.students.forEach((student, index) => {
+        const list = state.feedbacks[student] || [];
+        totalCount += list.length;
+
+        text += `----------------------------------------------\n`;
+        text += `▶ [${index + 1}] '${student}'의 글에 모인 친구들의 마음 (총 ${list.length}개)\n`;
+        text += `----------------------------------------------\n`;
+
+        if (list.length === 0) {
+          text += `  (아직 작성된 소감이 없습니다)\n\n`;
+        } else {
+          list.forEach((fb, fbIdx) => {
+            const catStr = (fb.categories || ['느낀점']).map(c => `[${c}]`).join(' ');
+            text += `  ${fbIdx + 1}. [${fb.from} 친구] ${fb.emoji} (${fb.label}) ${catStr}\n`;
+            text += `     느낀점: "${fb.comment}" (${fb.timestamp})\n`;
+          });
+          text += `\n`;
+        }
+      });
+
+      text += `==============================================\n`;
+      text += `  총 모인 마음: ${totalCount}개\n`;
+      text += `==============================================\n`;
+
+      if (totalCount === 0) {
+        showToast('아직 작성된 느낀점이 없어요.', 'ℹ️');
+        return;
+      }
+
+      const fileDate = new Date().toISOString().slice(0, 10);
+      downloadFile(text, `우마시_학급소감모음_${fileDate}.txt`, 'text/plain;charset=utf-8;');
+      showToast('텍스트 보고서 파일로 다운로드되었습니다!', '📥');
+    };
+
+    function downloadFile(content, fileName, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    window.resetFeedbackData = async function() {
+      state.feedbacks = {};
+      renderDashboard();
+      closeTeacherModal();
+      await saveFeedbacksToCloud();
+      showToast('소감 데이터가 모두 깨끗하게 비워졌습니다.', '🧹');
+    };
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderRosterDropdown();
+      setupEmojiPicker();
+      updatePermissionIndicator();
+      initCloudSync();
+    });
+  </script>
+</body>
+</html>
