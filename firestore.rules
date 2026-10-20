@@ -66,7 +66,9 @@ service cloud.firestore {
         allow delete: if isTeacher(classId);
 
         // 학생: 자기 이름표(uid)로만 새로 쓰기
+        // 문서 이름이 '보낸사람__받는사람'이어야 함 → 한 친구에게 마음은 한 번만
         allow create: if signedIn()
+          && fid == request.resource.data.from + '__' + request.resource.data.to
           && validFeedback(request.resource.data)
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.to != request.resource.data.from
