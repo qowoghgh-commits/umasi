@@ -249,30 +249,36 @@ function renderView() {
 // ---------- 로그인 ----------
 function renderLogin() {
   if ($('loginView').hidden) return;
-  const box = $('rosterChips');
+  const sel = $('nameSelect');
   $('rosterCount').textContent = S.students.length;
-  if (!S.students.length) {
-    box.innerHTML = `<div class="roster-empty">${S.classLoaded ? '아직 명단이 없어요. 아래에 내 이름을 직접 적어 주세요.' : '명단을 불러오는 중…'}</div>`;
-    return;
-  }
-  box.innerHTML = S.students
-    .map((n) => `<button type="button" class="roster-chip" role="listitem" data-action="pick-name" data-name="${esc(n)}">${esc(n)}</button>`)
-    .join('');
+  const empty = !S.students.length;
+  $('rosterEmpty').hidden = !(empty && S.classLoaded);
+  $('enterBtn').disabled = empty;
+  const key = S.students.join('\n') + '|' + S.classLoaded;
+  if (sel.dataset.key === key) return; // 고르는 중인 값은 그대로 둠
+  sel.dataset.key = key;
+  const keep = sel.value;
+  sel.innerHTML = empty
+    ? `<option value="">${S.classLoaded ? '명단이 비어 있어요' : '명단을 불러오는 중…'}</option>`
+    : '<option value="">내 이름을 찾아 골라요</option>' +
+      [...S.students].sort((x, y) => x.localeCompare(y, 'ko')).map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if (keep && S.students.includes(keep)) sel.value = keep;
 }
 
 async function enterAs(rawName) {
   const name = cleanName(rawName);
-  if (!name) { toast('이름을 고르거나 적어 주세요!', '🔔'); $('nameInput').focus(); return; }
+  if (!name || !S.students.includes(name)) {
+    toast('목록에서 내 이름을 골라 주세요!', '🔔');
+    $('nameSelect').focus();
+    return;
+  }
   S.name = name;
   S.animate = true;
   safeSet(NAME_KEY, name);
-  $('nameInput').value = '';
+  $('nameSelect').value = '';
   renderAll();
   window.scrollTo({ top: 0 });
   toast(`${name} 친구, 환영해요! 친구들의 글에 마음을 전해 보세요.`, '🎉');
-  if (!S.students.includes(name)) {
-    setDoc(classRef, { students: arrayUnion(name) }, { merge: true }).catch(writeFailed);
-  }
 }
 
 function logoutStudent() {
@@ -931,7 +937,6 @@ document.addEventListener('click', (e) => {
 
   switch (a) {
     case 'home': closeAllModals(); window.scrollTo({ top: 0, behavior: 'smooth' }); break;
-    case 'pick-name': enterAs(name); break;
     case 'logout': logoutStudent(); break;
     case 'filter': S.filter = el.dataset.filter; S.animate = true; renderDash(); break;
     case 'open-detail': openDetail(name); break;
@@ -990,7 +995,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.id === 'commentInput') submitCompose();
 });
 
-$('loginForm').addEventListener('submit', (e) => { e.preventDefault(); enterAs($('nameInput').value); });
+$('loginForm').addEventListener('submit', (e) => { e.preventDefault(); enterAs($('nameSelect').value); });
 $('teacherSignedOut').addEventListener('submit', (e) => { e.preventDefault(); teacherLogin(); });
 $('pwChangeForm').addEventListener('submit', (e) => { e.preventDefault(); changePassword(); });
 $('searchInput').addEventListener('input', (e) => { S.query = e.target.value; renderDash(); });
