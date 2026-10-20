@@ -8,7 +8,7 @@
 | | 이전 | 지금 |
 |---|---|---|
 | 저장 방식 | 반 전체 소감을 문서 하나에 통째로 덮어쓰기 → 동시에 쓰면 소감이 사라질 수 있음 | 소감 1개 = 문서 1개. 여러 명이 동시에 써도 안전 |
-| 선생님 잠금 | 비밀번호 `0502`가 페이지 소스에 그대로 보임 | 지정한 Google 계정만 관리 가능 (서버 보안 규칙으로 보호) |
+| 선생님 잠금 | 비밀번호 `0502`가 페이지 소스에 그대로 보임 | 비밀번호는 Firebase 서버에만 보관, 서버가 확인 (소스에 없음) |
 | 고치기·지우기 | 이름만 알면 다른 친구 소감도 고칠 수 있었음 | 자기가 쓴 소감만 고칠 수 있음 (같은 기기 기준) |
 | 반려된 글 | 받는 친구에게도 보임 | 쓴 친구와 선생님에게만 보임. 다시 쓰면 "다시 씀"으로 표시 |
 | 인터넷 끊김 | 저장 실패 | 기기에 보관했다가 연결되면 자동 저장 |
@@ -22,7 +22,7 @@
 index.html            화면
 css/style.css         디자인
 js/app.js             동작 (Firebase 연결)
-js/firebase-config.js Firebase 설정 · 학급 ID · 선생님 이메일
+js/firebase-config.js Firebase 설정 · 학급 ID
 firestore.rules       Firestore 보안 규칙 (콘솔에 붙여넣기)
 vercel.json           Vercel 배포 설정
 ```
@@ -33,19 +33,17 @@ vercel.json           Vercel 배포 설정
 
 [Firebase 콘솔](https://console.firebase.google.com/) → 프로젝트 `umasi-116cc`에서:
 
-1. **Authentication → 로그인 방법(Sign-in method)**
-   - `익명(Anonymous)` 사용 설정 → 학생용
-   - `Google` 사용 설정 → 선생님용
-2. **Authentication → 설정(Settings) → 승인된 도메인(Authorized domains)**
-   - Vercel 주소 추가 (예: `umasi.vercel.app`)
-3. **Firestore Database → 규칙(Rules)**
-   - `firestore.rules` 내용을 통째로 붙여넣고 **게시(Publish)**
+1. **Authentication → 로그인 방법** → `익명(Anonymous)` 사용 설정
+2. **Firestore Database → 규칙** → `firestore.rules` 내용을 붙여넣고 **게시**
 
-## 선생님 계정 바꾸기 / 추가하기
+## 선생님 비밀번호
 
-두 곳을 똑같이 고칩니다.
-- `js/firebase-config.js` → `TEACHER_EMAILS`
-- `firestore.rules` → `teacherEmails()` (고친 뒤 콘솔에 다시 게시)
+- 선생님 비밀번호는 Firestore의 `classes/umasi-class/private/teacher` 문서에만 저장되고,
+  보안 규칙 때문에 **누구도 읽을 수 없습니다.** 페이지 소스에도 없습니다.
+- 바꾸기: 선생님 모드 → 관리 화면의 **🔑 선생님 비밀번호 바꾸기**.
+  바꾸면 다른 기기의 선생님 모드는 자동으로 풀립니다.
+- 잊어버렸을 때: Firebase 콘솔 → Firestore → 데이터 → `classes/umasi-class/private/teacher` 문서의 `pw` 값을 직접 고칩니다.
+- 숫자 4자리는 시간을 들이면 맞혀 볼 수 있으니, 영문+숫자를 섞어 6자 이상을 권합니다.
 
 ## 다른 반에서 쓰기
 
@@ -57,4 +55,4 @@ vercel.json           Vercel 배포 설정
   개발자 도구를 다룰 줄 아는 학생이라면 데이터를 들여다볼 수 있습니다. 민감한 내용은 쓰지 않도록 지도해 주세요.
 - 학생이 자기 소감을 고치거나 지울 수 있는 권한은 **처음 쓴 기기(브라우저)** 기준입니다.
   다른 기기에서 고쳐야 하면 선생님이 대신 고칠 수 있습니다.
-- 같은 기기에서 선생님이 로그인했다가 로그아웃하면, 그 기기에서 학생들이 이전에 쓴 소감은 학생이 직접 고칠 수 없게 됩니다(선생님은 가능).
+- 선생님 모드는 기기(브라우저)마다 따로 켜집니다. 학생과 같이 쓰는 기기라면 끝날 때 **선생님 모드 끝내기**를 눌러 주세요.

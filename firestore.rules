@@ -5,21 +5,21 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ▼ 선생님 Google 계정 (소문자). js/firebase-config.js 의 TEACHER_EMAILS 와 똑같이 맞춰 주세요.
-    function teacherEmails() {
-      return ['design013@nyschool.co.kr'];
-    }
-
     function signedIn() {
       return request.auth != null;
     }
 
-    function isTeacher() {
+    // 선생님 = 이 기기(uid)의 선생님 표시에 적힌 비밀번호가 지금 비밀번호와 같을 때
+    // (비밀번호를 바꾸면 다른 기기의 선생님 모드는 자동으로 풀림)
+    function isTeacher(classId) {
       return signedIn()
-        && 'email' in request.auth.token
-        && request.auth.token.email is string
-        && request.auth.token.email_verified == true
-        && request.auth.token.email.lower() in teacherEmails();
+        && exists(/databases/$(database)/documents/classes/$(classId)/teacherSessions/$(request.auth.uid))
+        && get(/databases/$(database)/documents/classes/$(classId)/teacherSessions/$(request.auth.uid)).data.pw
+           == get(/databases/$(database)/documents/classes/$(classId)/private/teacher).data.pw;
+    }
+
+    function isPw(v) {
+      return v is string && v.size() >= 4 && v.size() <= 30;
     }
 
     function isName(v) {
@@ -44,7 +44,7 @@ service cloud.firestore {
     // 학급 설정 (명단 + 열람 허용)
     match /classes/{classId} {
       allow read: if signedIn();
-      allow write: if isTeacher();
+      allow write: if isTeacher(classId);
 
       // 학생: 처음 들어올 때 자기 이름 한 명을 명단에 추가하는 것만 가능
       allow create: if signedIn()
@@ -62,8 +62,8 @@ service cloud.firestore {
         allow read: if signedIn();
 
         // 선생님: 무엇이든 (모양 검사는 통과해야 함)
-        allow create, update: if isTeacher() && validFeedback(request.resource.data);
-        allow delete: if isTeacher();
+        allow create, update: if isTeacher(classId) && validFeedback(request.resource.data);
+        allow delete: if isTeacher(classId);
 
         // 학생: 자기 이름표(uid)로만 새로 쓰기
         allow create: if signedIn()
@@ -87,11 +87,32 @@ service cloud.firestore {
         // 학생: 자기가 쓴 글만 지우기
         allow delete: if signedIn() && resource.data.uid == request.auth.uid;
       }
+
+      // 선생님 비밀번호 — 아무도 읽을 수 없음. 처음 한 번만 만들 수 있고, 이후엔 선생님만 바꿀 수 있음
+      match /private/teacher {
+        allow read, delete: if false;
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['pw'])
+          && isPw(request.resource.data.pw);
+        allow update: if isTeacher(classId)
+          && request.resource.data.keys().hasOnly(['pw'])
+          && isPw(request.resource.data.pw);
+      }
+
+      // 선생님 모드 표시 (기기별). 비밀번호가 맞아야만 만들 수 있음
+      match /teacherSessions/{uid} {
+        allow read, delete: if signedIn() && request.auth.uid == uid;
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['pw', 'at'])
+          && request.resource.data.at == request.time
+          && request.resource.data.pw == get(/databases/$(database)/documents/classes/$(classId)/private/teacher).data.pw;
+      }
     }
 
     // 이전 버전 데이터 — 선생님만 읽기 (가져오기 기능용). 옮긴 뒤에는 지워도 됩니다.
     match /artifacts/{appId}/public/data/{rest=**} {
-      allow read: if isTeacher();
+      allow read: if isTeacher(appId);
       allow write: if false;
     }
   }
