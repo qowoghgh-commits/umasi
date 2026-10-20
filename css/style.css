@@ -550,3 +550,18 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 
 /* 상단 로고 */
 .brand:hover .brand-icon { animation: wiggle .6s ease; }
+
+/* ===== 이름 고르기 (스크롤 목록) ===== */
+.name-select-wrap { position: relative; }
+.name-select {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  text-align: center; text-align-last: center; padding-right: 44px; padding-left: 44px;
+  font-weight: 700; color: var(--ink);
+}
+.name-select:invalid, .name-select option[value=""] { color: var(--ink-3); }
+.name-select-arrow {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  font-size: 20px; color: var(--amber-d); pointer-events: none; animation: bob 1.8s ease-in-out infinite;
+}
+.login-form .roster-empty { margin: 0; }
+#enterBtn:disabled { animation: none; }
