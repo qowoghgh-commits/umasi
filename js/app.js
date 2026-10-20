@@ -94,7 +94,9 @@ function esc(v) {
 }
 function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function safeSet(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
-function cleanName(raw) { return String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 10); }
+function cleanName(raw) { return String(raw || '').replace(/[\/\\#?%]/g, '').replace(/\s+/g, ' ').trim().slice(0, 10); }
+// 한 친구에게는 마음을 한 번만: 보낸 사람+받는 사람으로 문서 이름을 정함 (서버도 같은 규칙으로 확인)
+function pairId(from, to) { return `${from}__${to}`; }
 function isTeacher() { return S.teacher; }
 function toDate(ts) { return ts && typeof ts.toDate === 'function' ? ts.toDate() : null; }
 function timeOf(fb) { const d = toDate(fb.createdAt); return d ? d.getTime() : 0; }
@@ -289,9 +291,9 @@ function renderDash() {
   const totalVisible = S.teacherView ? S.feedbacks.length : S.feedbacks.filter(countable).length;
   const mine = mySentCount();
 
-  $('statStudents').textContent = S.students.length;
-  $('statFeedbacks').textContent = totalVisible;
-  $('statMine').textContent = S.teacherView ? '-' : mine;
+  setNum('statStudents', S.students.length);
+  setNum('statFeedbacks', totalVisible);
+  setNum('statMine', S.teacherView ? '-' : mine);
   const lock = $('lockPill');
   lock.className = `lock-pill ${S.allowOwnView ? 'is-open' : 'is-locked'}`;
   lock.textContent = S.allowOwnView ? '🔓 내 글 소감: 열람 가능' : '🔒 내 글 소감: 활동 중';
@@ -354,7 +356,9 @@ function cardHtml(name, sent, i) {
     foot = `<span class="tiny muted">${S.allowOwnView ? '친구들이 남긴 마음을 열어 봐요' : '활동이 끝나면 열려요'}</span><span class="tiny accent">보기 →</span>`;
   } else {
     foot = `<span class="tiny muted">${sent ? '마음을 보냈어요 💛' : '글을 읽었나요?'}</span>
-      <button class="btn btn-sm ${sent ? 'btn-soft' : 'btn-primary'}" data-action="compose" data-name="${esc(name)}">${sent ? '한 번 더' : '마음 보내기 ✏️'}</button>`;
+      ${sent
+        ? `<button class="btn btn-sm btn-soft" data-action="open-detail" data-name="${esc(name)}">보낸 마음 보기</button>`
+        : `<button class="btn btn-sm btn-primary" data-action="compose" data-name="${esc(name)}">마음 보내기 ✏️</button>`}`;
   }
 
   const cls = ['fcard', isSelf && 'is-self', !tv && sent && !isSelf && 'is-sent', tv && 'is-teacher'].filter(Boolean).join(' ');
@@ -379,7 +383,7 @@ function renderTree(mine, sentTo) {
   $('myLevel').textContent = st.level;
   $('myTreeTitle').textContent = st.title;
   $('myTreeDesc').textContent = st.desc;
-  $('myCount').textContent = `${mine}개`;
+  setNum('myCount', `${mine}개`);
   if (st.max === Infinity) {
     $('myBar').style.width = '100%';
     $('myNext').textContent = '🎉 모든 성장 단계를 달성했어요!';
@@ -389,7 +393,7 @@ function renderTree(mine, sentTo) {
   }
   const friends = S.students.filter((n) => n !== S.name);
   const done = friends.filter((n) => sentTo.has(n)).length;
-  $('sentFriends').textContent = `${done} / ${friends.length}명`;
+  setNum('sentFriends', `${done} / ${friends.length}명`);
   $('myTreeIcon').closest('.tree-card').hidden = S.teacherView;
 }
 
@@ -410,6 +414,16 @@ function openCompose(target, fb = null) {
   if (!fb) {
     if (!S.name) { toast('먼저 이름을 고르고 들어와 주세요!', '⚠️'); return; }
     if (target === S.name) { toast('내 글에는 소감을 남길 수 없어요.', '🙂'); return; }
+    const already = S.feedbacks.find((f) => f.to === target && f.from === S.name);
+    if (already) {
+      if (isMine(already)) {
+        toast('마음은 한 친구에게 한 번만 보낼 수 있어요. 보낸 마음을 고쳐 볼까요?', '💌', 3200);
+        fb = already;
+      } else {
+        toast(`${target} 친구에게는 이미 마음을 보냈어요. 한 친구에게 한 번만 보낼 수 있어요.`, '💌', 3200);
+        return;
+      }
+    }
   }
   const byTeacher = !!fb && S.teacherView;
   S.compose = {
@@ -457,7 +471,7 @@ function submitCompose() {
 
   if (c.mode === 'new') {
     const before = stageIndex(mySentCount());
-    addDoc(fbCol, {
+    setDoc(doc(fbCol, pairId(S.name, c.target)), {
       to: c.target, from: S.name, uid: S.user.uid,
       emoji: c.emoji, label: c.label, categories, comment,
       status: 'normal', editedBy: null,
@@ -505,7 +519,7 @@ function renderDetail() {
   const canView = tv || !isSelf || S.allowOwnView;
 
   $('detailTitle').textContent = `📜 ${name}의 글`;
-  $('detailWriteBtn').hidden = tv || isSelf || !S.name;
+  $('detailWriteBtn').hidden = tv || isSelf || !S.name || S.feedbacks.some((f) => f.to === name && f.from === S.name);
 
   const summary = $('detailSummary');
   const box = $('detailList');
@@ -587,6 +601,18 @@ function fbHtml(fb) {
     ${note}
     <div class="fb-text">${esc(fb.comment)}</div>
   </div>`;
+}
+
+// 숫자가 바뀌면 통통 튀는 효과
+function setNum(id, v) {
+  const el = $(id);
+  const t = String(v);
+  if (el.textContent === t) return;
+  const first = el.dataset.ready !== '1';
+  el.textContent = t;
+  el.dataset.ready = '1';
+  if (first) return;
+  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
 }
 
 function findFb(id) { return S.feedbacks.find((f) => f.id === id); }
@@ -941,6 +967,21 @@ document.addEventListener('click', (e) => {
     case 'confirm-yes': { const cb = S.confirmCb; S.confirmCb = null; closeModal('confirmModal'); cb && cb(); break; }
     case 'confirm-no': S.confirmCb = null; closeModal('confirmModal'); break;
   }
+});
+
+// 버튼을 누르면 물결이 퍼지는 효과
+document.addEventListener('pointerdown', (e) => {
+  const el = e.target.closest('.btn, .roster-chip, .emoji-btn, .seg-btn, .chip span, .starter');
+  if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const r = el.getBoundingClientRect();
+  const size = Math.max(r.width, r.height) * 1.6;
+  const dot = document.createElement('span');
+  dot.className = 'ripple';
+  dot.style.width = dot.style.height = `${size}px`;
+  dot.style.left = `${e.clientX - r.left - size / 2}px`;
+  dot.style.top = `${e.clientY - r.top - size / 2}px`;
+  el.appendChild(dot);
+  setTimeout(() => dot.remove(), 650);
 });
 
 document.addEventListener('keydown', (e) => {
