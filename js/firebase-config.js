@@ -1,7 +1,7 @@
 // Firebase 웹 설정값은 공개되어도 되는 값입니다.
 // 실제 보안은 firestore.rules(보안 규칙)에서 지킵니다.
 export const firebaseConfig = {
-  apiKey: "AIzaSyDyFiU-NCoUUUkB2HSzuxkOqpHk98B52cQ",
+  apiKey: "AIzaSyDyFIu-NCoUUUkB2HSzuxkOqpHk98B52cQ",
   authDomain: "umasi-116cc.firebaseapp.com",
   projectId: "umasi-116cc",
   storageBucket: "umasi-116cc.firebasestorage.app",
