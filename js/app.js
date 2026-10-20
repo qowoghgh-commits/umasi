@@ -1,20 +1,19 @@
 // =====================================================
 //  우마시 (우리들의 마음 나누기) — 앱 로직
 //  - 소감 1개 = Firestore 문서 1개 (동시 작성해도 서로 덮어쓰지 않음)
-//  - 학생: 익명 로그인 / 선생님: Google 로그인 (보안 규칙으로 보호)
+//  - 학생·선생님 모두 익명 로그인 / 선생님 모드는 서버가 비밀번호를 확인 (보안 규칙)
 //  - 오프라인에서도 작성 → 연결되면 자동 저장
 // =====================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import {
-  getAuth, onAuthStateChanged, signInAnonymously,
-  GoogleAuthProvider, signInWithPopup, signOut
+  getAuth, onAuthStateChanged, signInAnonymously
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, collection, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc,
   getDoc, getDocs, writeBatch, serverTimestamp, arrayUnion, Timestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { firebaseConfig, CLASS_ID, TEACHER_EMAILS, LEGACY_APP_ID } from "./firebase-config.js";
+import { firebaseConfig, CLASS_ID, LEGACY_APP_ID } from "./firebase-config.js";
 
 // ---------- 상수 ----------
 const EMOJIS = [
@@ -63,6 +62,8 @@ try {
 }
 const classRef = doc(db, 'classes', CLASS_ID);
 const fbCol = collection(classRef, 'feedbacks');
+const secretRef = doc(classRef, 'private', 'teacher');
+const sessionRef = () => doc(classRef, 'teacherSessions', S.user.uid);
 
 // ---------- 상태 ----------
 const S = {
@@ -82,6 +83,7 @@ const S = {
   detailTarget: null,
   confirmCb: null,
   unsubs: [],
+  teacher: false,
   animate: true
 };
 
@@ -93,10 +95,7 @@ function esc(v) {
 function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function safeSet(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
 function cleanName(raw) { return String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 10); }
-function isTeacher() {
-  const u = S.user;
-  return !!(u && !u.isAnonymous && u.email && TEACHER_EMAILS.includes(u.email.toLowerCase()));
-}
+function isTeacher() { return S.teacher; }
 function toDate(ts) { return ts && typeof ts.toDate === 'function' ? ts.toDate() : null; }
 function timeOf(fb) { const d = toDate(fb.createdAt); return d ? d.getTime() : 0; }
 function fmtTime(fb) {
@@ -139,7 +138,6 @@ onAuthStateChanged(auth, (user) => {
   }
   S.user = user;
   S.error = null;
-  if (!isTeacher() && S.teacherView) exitTeacherView();
   startListeners();
   renderAll();
   renderTeacherModal();
@@ -178,6 +176,13 @@ function startListeners() {
     S.fbLoaded = S.fbLoaded || !snap.metadata.fromCache;
     renderAll();
   }, onListenError));
+
+  // 이 기기가 선생님 모드인지 (서버에서 비밀번호가 확인된 기기만 표시가 생김)
+  S.unsubs.push(onSnapshot(sessionRef(), (snap) => {
+    S.teacher = snap.exists();
+    if (!S.teacher && S.teacherView) exitTeacherView();
+    renderAll();
+  }, () => { S.teacher = false; }));
 }
 
 function onListenError(err) {
@@ -195,6 +200,11 @@ function onListenError(err) {
 function writeFailed(err) {
   console.error(err);
   const denied = err?.code === 'permission-denied';
+  if (denied && S.teacher) {
+    toast('선생님 비밀번호가 바뀌어 선생님 모드가 풀렸어요. 다시 들어와 주세요.', '🔑', 4500);
+    deleteDoc(sessionRef()).catch(() => {});
+    return;
+  }
   toast(denied ? '저장 권한이 없어요. 선생님께 알려주세요.' : '저장하지 못했어요. 잠시 후 다시 해 주세요.', '⚠️', 4000);
 }
 
@@ -602,7 +612,7 @@ function renderTeacherModal() {
   const t = isTeacher();
   $('teacherSignedOut').hidden = t;
   $('teacherSignedIn').hidden = !t;
-  $('teacherWho').textContent = t ? `${S.user.email} 계정으로 로그인했어요.` : 'Google 계정으로 로그인해 주세요.';
+  $('teacherWho').textContent = t ? '이 기기는 선생님 모드예요.' : '비밀번호를 입력해 주세요.';
   if (!t) return;
 
   const names = S.students;
@@ -628,38 +638,59 @@ function renderTeacherModal() {
   if (document.activeElement !== ri && !ri.dataset.dirty) ri.value = S.students.join(', ');
 }
 
+function withTimeout(p, ms = 10000) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), ms))]);
+}
+
 async function teacherLogin() {
+  const input = $('teacherPw');
+  const pw = input.value.trim();
+  const note = $('teacherDenied');
+  if (!pw) { input.focus(); return; }
+  if (!S.user) { toast('아직 연결 중이에요. 잠시 후 다시 해 주세요.', '⏳'); return; }
+  const btn = $('teacherLoginBtn');
+  btn.disabled = true; btn.textContent = '확인 중…';
   try {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    const res = await signInWithPopup(auth, provider);
-    const email = (res.user.email || '').toLowerCase();
-    if (!TEACHER_EMAILS.includes(email)) {
-      $('teacherDenied').hidden = false;
-      $('teacherDenied').textContent = `${email} 계정은 선생님으로 등록되어 있지 않아요.`;
-      await signOut(auth);
-      return;
-    }
-    $('teacherDenied').hidden = true;
+    // 서버 보안 규칙이 비밀번호를 확인해 줌 (비밀번호는 페이지 소스에 없음)
+    await withTimeout(setDoc(sessionRef(), { pw, at: serverTimestamp() }));
+    input.value = '';
+    note.hidden = true;
     toast('선생님, 반가워요!', '🧑‍🏫');
   } catch (err) {
     console.error(err);
-    const code = err?.code || '';
-    let msg = '로그인하지 못했어요.';
-    if (code.includes('popup-closed') || code.includes('cancelled-popup')) return;
-    if (code.includes('popup-blocked')) msg = '팝업이 막혔어요. 브라우저에서 팝업을 허용해 주세요.';
-    if (code.includes('unauthorized-domain')) msg = '이 주소가 Firebase 승인 도메인에 없어요.';
-    if (code.includes('operation-not-allowed')) msg = 'Firebase에서 Google 로그인을 켜야 해요.';
-    $('teacherDenied').hidden = false;
-    $('teacherDenied').textContent = msg;
+    note.hidden = false;
+    note.textContent = err?.code === 'permission-denied' ? '비밀번호가 맞지 않아요.'
+      : err?.code === 'timeout' ? '인터넷 연결을 확인해 주세요.' : '확인하지 못했어요. 다시 해 주세요.';
+    input.select();
+    const form = $('teacherSignedOut');
+    form.classList.remove('shake'); void form.offsetWidth; form.classList.add('shake');
+  } finally {
+    btn.disabled = false; btn.textContent = '들어가기';
   }
 }
 
 async function teacherLogout() {
   exitTeacherView();
   closeAllModals();
-  await signOut(auth); // → 익명 로그인으로 자동 전환
-  toast('선생님 로그아웃했어요.', '👋');
+  try { await deleteDoc(sessionRef()); } catch (err) { console.error(err); }
+  S.teacher = false;
+  renderAll();
+  toast('선생님 모드를 끝냈어요.', '👋');
+}
+
+async function changePassword() {
+  const input = $('newPw');
+  const pw = input.value.trim();
+  if (pw.length < 4) { toast('비밀번호는 4자 이상으로 정해 주세요.', '🔑'); input.focus(); return; }
+  try {
+    await withTimeout(updateDoc(secretRef, { pw }));
+    await withTimeout(setDoc(sessionRef(), { pw, at: serverTimestamp() }));
+    input.value = '';
+    toast('비밀번호를 바꿨어요. 새 비밀번호를 꼭 기억해 두세요!', '🔑', 4000);
+  } catch (err) {
+    console.error(err);
+    toast(err?.code === 'permission-denied' ? '선생님 모드가 풀렸어요. 다시 들어와 주세요.' : '바꾸지 못했어요.', '⚠️', 4000);
+  }
 }
 
 function enterTeacherView() {
@@ -897,8 +928,7 @@ document.addEventListener('click', (e) => {
     case 'edit-fb': { const fb = findFb(id); if (fb) openCompose(fb.to, fb); break; }
     case 'delete-fb': deleteFb(id); break;
     case 'set-status': setStatus(id, el.dataset.status); break;
-    case 'open-teacher': $('teacherDenied').hidden = true; renderTeacherModal(); openModal('teacherModal'); break;
-    case 'teacher-login': teacherLogin(); break;
+    case 'open-teacher': $('teacherDenied').hidden = true; renderTeacherModal(); openModal('teacherModal'); if (!S.teacher) setTimeout(() => $('teacherPw').focus(), 120); break;
     case 'teacher-logout': teacherLogout(); break;
     case 'enter-teacher-view': enterTeacherView(); break;
     case 'exit-teacher-view': exitTeacherView(); break;
@@ -920,6 +950,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 $('loginForm').addEventListener('submit', (e) => { e.preventDefault(); enterAs($('nameInput').value); });
+$('teacherSignedOut').addEventListener('submit', (e) => { e.preventDefault(); teacherLogin(); });
+$('pwChangeForm').addEventListener('submit', (e) => { e.preventDefault(); changePassword(); });
 $('searchInput').addEventListener('input', (e) => { S.query = e.target.value; renderDash(); });
 $('commentInput').addEventListener('input', updateCharCount);
 $('rosterInput').addEventListener('input', (e) => { e.target.dataset.dirty = '1'; });

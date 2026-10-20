@@ -13,9 +13,5 @@ export const firebaseConfig = {
 // 학급 구분용 ID. 다른 반에서 같이 쓰려면 이 값만 바꿔 배포하면 데이터가 분리됩니다.
 export const CLASS_ID = "umasi-class";
 
-// 선생님 관리 화면을 열 수 있는 Google 계정 (소문자).
-// 바꾸면 firestore.rules 의 teacherEmails() 목록도 똑같이 바꿔야 합니다.
-export const TEACHER_EMAILS = ["design013@nyschool.co.kr"];
-
 // 이전 버전(한 문서에 모두 저장하던 방식) 데이터 위치 — 가져오기 기능에서만 사용
 export const LEGACY_APP_ID = "umasi-class";
