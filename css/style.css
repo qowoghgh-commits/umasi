@@ -417,3 +417,136 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 #teacherSignedOut .input { letter-spacing: 4px; }
 .shake { animation: shake .4s; }
 @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+/* ===== 임팩트 있는 제목 ===== */
+.hero-title { position: relative; padding: 6px 0 4px; margin-bottom: 6px; }
+.hero-name {
+  margin: 0; line-height: 1;
+  font-family: var(--font-title); font-weight: 400;
+  font-size: clamp(64px, 16vw, 96px); letter-spacing: 4px;
+  display: inline-flex; gap: 2px;
+}
+.hero-name span {
+  display: inline-block;
+  font-family: 'Jua', 'Noto Sans KR', sans-serif; font-weight: 800;
+  -webkit-text-stroke: 7px #fff; paint-order: stroke fill;
+  text-shadow: 0 6px 0 rgba(160, 90, 20, .22), 0 14px 22px rgba(247, 116, 95, .28);
+  animation: hero-pop .7s cubic-bezier(.3, 1.6, .5, 1) both, hero-float 3.2s ease-in-out infinite;
+}
+.hero-name .hl1 { color: #F5A524; }
+.hero-name .hl2 { color: #F7745F; }
+.hero-name .hl3 { color: #E5486B; }
+.hero-name .hl1 { animation-delay: .05s, .8s; }
+.hero-name .hl2 { animation-delay: .17s, 1.1s; }
+.hero-name .hl3 { animation-delay: .29s, 1.4s; }
+.hero-sub {
+  display: inline-block; margin: 20px 0 0; padding: 7px 16px; border-radius: 999px;
+  background: #fff; border: 2px dashed #FFD27A; color: var(--ink-2);
+  font-size: 14px; font-weight: 700;
+}
+.hero-sub b { color: #E5486B; font-size: 1.12em; }
+.hero-deco { position: absolute; font-size: 28px; animation: bob 2.6s ease-in-out infinite; pointer-events: none; }
+.hero-deco.d1 { left: 4%;  top: 6%;  animation-delay: .2s; }
+.hero-deco.d2 { right: 6%; top: 0;   font-size: 32px; animation-delay: .6s; }
+.hero-deco.d3 { left: 10%; bottom: 18%; font-size: 24px; animation-delay: 1s; }
+.hero-deco.d4 { right: 12%; bottom: 22%; font-size: 22px; animation-delay: 1.4s; }
+.login-card .hello { font-size: clamp(19px, 3.4vw, 23px); margin-top: 14px; }
+@keyframes hero-pop { 0% { opacity: 0; transform: translateY(18px) scale(.6); } 100% { opacity: 1; transform: none; } }
+@keyframes hero-float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-6px) rotate(-2deg); } }
+@media (max-width: 520px) {
+  .hero-deco { font-size: 22px; }
+  .hero-deco.d3, .hero-deco.d4 { display: none; }
+  .hero-deco.d2 { font-size: 24px; }
+  .hero-sub { font-size: 13px; padding: 6px 12px; }
+}
+
+/* 상단바 로고도 같은 느낌으로 */
+.brand-name {
+  font-size: 26px; letter-spacing: 1px; color: #F7745F;
+  text-shadow: 0 2px 0 rgba(160, 90, 20, .18);
+}
+
+/* ===== 버튼·움직임 효과 ===== */
+.btn, .roster-chip, .emoji-btn, .seg-btn, .chip span, .starter { position: relative; overflow: hidden; }
+.ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: rgba(255, 255, 255, .45); transform: scale(0);
+  animation: ripple .6s ease-out forwards;
+}
+.btn-soft .ripple, .btn-ghost .ripple, .roster-chip .ripple, .emoji-btn .ripple,
+.seg-btn .ripple, .chip span .ripple, .starter .ripple { background: rgba(245, 165, 36, .28); }
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+/* 주 버튼: 빛이 스치는 효과 + 눌렀을 때 쫀득하게 */
+.btn-primary { background-size: 160% 100%; background-position: 0 0; transition: background-position .4s ease, transform .12s ease, box-shadow .2s ease, filter .2s; }
+.btn-primary:hover { background-position: 100% 0; transform: translateY(-2px); }
+.btn-primary:active { transform: translateY(0) scale(.96); }
+.btn-primary::before {
+  content: ""; position: absolute; top: 0; left: -60%; width: 45%; height: 100%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .55), transparent);
+  transform: skewX(-20deg); animation: shine 3.6s ease-in-out infinite; pointer-events: none;
+}
+@keyframes shine { 0%, 62% { left: -60%; } 100% { left: 130%; } }
+.btn-lg.btn-primary { animation: glow 2.4s ease-in-out infinite; }
+@keyframes glow {
+  0%, 100% { box-shadow: 0 6px 16px rgba(247, 116, 95, .32); }
+  50% { box-shadow: 0 8px 26px rgba(247, 116, 95, .55), 0 0 0 6px rgba(255, 185, 56, .14); }
+}
+.btn-lg.btn-primary span[aria-hidden] { display: inline-block; transition: transform .2s; }
+.btn-lg.btn-primary:hover span[aria-hidden] { transform: translateX(5px); }
+.btn-indigo, .btn-mint, .btn-amber, .btn-danger, .btn-ghost, .btn-soft { transition: transform .15s ease, box-shadow .2s, background .2s, filter .2s; }
+.btn-indigo:hover, .btn-mint:hover, .btn-amber:hover, .btn-danger:hover, .btn-ghost:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+/* 카드의 '마음 보내기' 버튼은 살짝 두근두근 */
+.fcard:not(.is-sent) .fcard-foot .btn-primary { animation: heartbeat 2.8s ease-in-out infinite; }
+.fcard:hover .fcard-foot .btn-primary { animation: none; transform: scale(1.06); }
+@keyframes heartbeat { 0%, 100% { transform: scale(1); } 8% { transform: scale(1.07); } 16% { transform: scale(1); } 24% { transform: scale(1.05); } 32% { transform: scale(1); } }
+
+/* 카드: 올리면 우편함이 흔들 */
+.fcard:hover .fcard-mail { animation: wiggle .6s ease; }
+@keyframes wiggle { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-14deg) scale(1.15); } 40% { transform: rotate(10deg) scale(1.15); } 60% { transform: rotate(-6deg) scale(1.1); } 80% { transform: rotate(3deg); } }
+.fcard.is-sent::after { animation: stamp .45s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes stamp { 0% { transform: scale(2.2) rotate(-12deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* 명단 이름표 */
+.roster-chip { transition: transform .15s cubic-bezier(.3, 1.6, .5, 1), border-color .15s, background .15s, box-shadow .15s; }
+.roster-chip:hover { transform: translateY(-3px) rotate(-1.5deg); box-shadow: 0 6px 14px rgba(245, 165, 36, .25); }
+.roster-chip:active { transform: scale(.94); }
+.roster-chips .roster-chip { animation: rise .35s ease both; }
+.roster-chips .roster-chip:nth-child(2n) { animation-delay: .04s; }
+.roster-chips .roster-chip:nth-child(3n) { animation-delay: .08s; }
+
+/* 이모티콘 고르기: 고르면 통! */
+.emoji-btn:hover .e { transform: scale(1.18) rotate(-6deg); }
+.emoji-btn.is-on { animation: picked .4s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes picked { 0% { transform: scale(.85); } 100% { transform: scale(1); } }
+.chip input:checked + span { animation: picked .35s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* 숫자가 바뀔 때 */
+.bump { display: inline-block; animation: bump .5s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.45); color: #E5486B; } 100% { transform: scale(1); } }
+
+/* 진행 막대에 반짝임 */
+.bar span { position: relative; overflow: hidden; }
+.bar span::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
+  transform: translateX(-100%); animation: barshine 2.8s ease-in-out infinite;
+}
+@keyframes barshine { 0%, 50% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* 창이 뜰 때 통통 */
+.modal-panel { animation: modal-in .38s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes modal-in { 0% { opacity: 0; transform: translateY(30px) scale(.94); } 100% { opacity: 1; transform: none; } }
+.toast.show { animation: toast-in .4s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes toast-in { 0% { transform: translate(-50%, 24px) scale(.9); } 100% { transform: translate(-50%, 0) scale(1); } }
+
+/* 제목 아래 띠가 살랑 */
+.hero-sub { animation: rise .5s .45s ease both; }
+.hero-sub b { display: inline-block; animation: hop 2.4s ease-in-out infinite; }
+.hero-sub b:nth-of-type(2) { animation-delay: .2s; }
+.hero-sub b:nth-of-type(3) { animation-delay: .4s; }
+@keyframes hop { 0%, 70%, 100% { transform: translateY(0); } 80% { transform: translateY(-4px); } }
+
+/* 상단 로고 */
+.brand:hover .brand-icon { animation: wiggle .6s ease; }
