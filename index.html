@@ -68,16 +68,18 @@
           <p class="hero-sub"><b>우</b>리들의 <b>마</b>음 나누기 <span aria-hidden="true">·</span> <b>시</b>작해 볼까요?</p>
         </div>
         <h2 class="title-lg hello">반가워요! 누구인가요?</h2>
-        <p class="muted">명단에서 내 이름을 누르거나, 직접 적고 들어가요.</p>
-
-        <div id="rosterChips" class="roster-chips" role="list"></div>
-
-        <div class="divider"><span>또는 직접 쓰기</span></div>
+        <p class="muted">목록을 스크롤해서 내 이름을 찾고, 들어가기를 눌러요.</p>
 
         <form id="loginForm" class="login-form" autocomplete="off">
-          <label for="nameInput" class="sr-only">내 이름</label>
-          <input id="nameInput" class="input input-lg" type="text" maxlength="10" placeholder="예: 김하늘" enterkeyhint="go">
-          <button type="submit" class="btn btn-primary btn-lg btn-block">
+          <label for="nameSelect" class="sr-only">내 이름 고르기</label>
+          <div class="name-select-wrap">
+            <select id="nameSelect" class="input input-lg name-select">
+              <option value="">명단을 불러오는 중…</option>
+            </select>
+            <span class="name-select-arrow" aria-hidden="true">▾</span>
+          </div>
+          <p id="rosterEmpty" class="roster-empty" hidden>아직 명단이 없어요. 선생님이 명단을 등록하면 이름을 고를 수 있어요.</p>
+          <button type="submit" class="btn btn-primary btn-lg btn-block" id="enterBtn">
             마음 나누러 가기 <span aria-hidden="true">→</span>
           </button>
         </form>
