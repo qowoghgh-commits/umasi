@@ -47,7 +47,7 @@
   <div id="teacherBanner" class="teacher-banner" hidden>
     <div class="wrap teacher-banner-inner">
       <span class="tag tag-indigo">선생님 모드</span>
-      <span class="banner-text">잠금과 상관없이 모든 소감을 보고, 고치고, 반려할 수 있어요.</span>
+      <span class="banner-text">닫힌 시간까지 모든 소감을 보고, 고치고, 반려할 수 있어요.</span>
       <button class="btn btn-sm btn-on-dark" data-action="exit-teacher-view">학생 화면으로</button>
     </div>
   </div>
@@ -99,15 +99,16 @@
         </div>
         <div class="hero-stats">
           <div class="stat"><span class="stat-num" id="statStudents">0</span><span class="stat-label">친구</span></div>
-          <div class="stat"><span class="stat-num" id="statFeedbacks">0</span><span class="stat-label">모인 마음</span></div>
-          <div class="stat"><span class="stat-num" id="statMine">0</span><span class="stat-label">내가 보낸</span></div>
+          <div class="stat"><span class="stat-num" id="statFeedbacks">0</span><span class="stat-label">이번 시간 마음</span></div>
+          <div class="stat"><span class="stat-num" id="statMine">0</span><span class="stat-label">쌓인 마음</span></div>
           <span id="lockPill" class="lock-pill is-locked">🔒 내 글 소감: 활동 중</span>
         </div>
       </div>
 
       <div class="dash-grid">
         <div class="dash-main">
-          <div class="toolbar">
+          <div class="session-bar" id="sessionBar" role="tablist" aria-label="시간 고르기"></div>
+          <div class="toolbar" id="dashToolbar">
             <div class="search">
               <span aria-hidden="true">🔍</span>
               <input id="searchInput" type="search" placeholder="친구 이름 찾기" aria-label="친구 이름 찾기">
@@ -261,6 +262,16 @@
 
       <!-- 로그인 후 -->
       <div id="teacherSignedIn" hidden>
+        <div class="t-section">
+          <div class="row-between">
+            <h4 class="title-xs">🗓️ 시간 관리</h4>
+            <button class="btn btn-indigo btn-sm" data-action="add-session">+ 새 시간 추가</button>
+          </div>
+          <p class="muted tiny">‘학생에게 열기’를 켠 시간만 학생 화면에 보여요. 소감은 시간마다 따로 쌓이고, 우리 반 마음 숲은 모든 시간을 합쳐 자라요.</p>
+          <div id="sessionAdmin" class="sess-admin"></div>
+        </div>
+
+        <h4 class="title-xs t-cur" id="tCurTitle">현재 시간 현황</h4>
         <div class="t-section t-overview">
           <div class="t-stat"><b id="tStatFb">0</b><span>모인 소감</span></div>
           <div class="t-stat"><b id="tStatNoRecv">0</b><span>못 받은 친구</span></div>
@@ -270,18 +281,7 @@
         <div id="tAttention" class="t-attention small"></div>
 
         <div class="t-section">
-          <button class="btn btn-indigo btn-block" data-action="enter-teacher-view">👀 전체 소감 보기 · 지도하기</button>
-        </div>
-
-        <div class="t-section t-row">
-          <div>
-            <h4 class="title-xs">🔓 자신이 받은 소감 열람 허용</h4>
-            <p class="muted tiny">켜면 학생들이 자기 글에 모인 소감을 볼 수 있어요.</p>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="allowToggle">
-            <span class="slider"></span>
-          </label>
+          <button class="btn btn-indigo btn-block" data-action="enter-teacher-view">👀 이 시간 소감 보기 · 지도하기</button>
         </div>
 
         <div class="t-section">
