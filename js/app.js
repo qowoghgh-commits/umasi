@@ -63,6 +63,7 @@ try {
 const classRef = doc(db, 'classes', CLASS_ID);
 const fbCol = collection(classRef, 'feedbacks');
 const secretRef = doc(classRef, 'private', 'teacher');
+const sessCol = collection(classRef, 'sessions');
 const sessionRef = () => doc(classRef, 'teacherSessions', S.user.uid);
 
 // ---------- 상태 ----------
@@ -73,6 +74,8 @@ const S = {
   allowOwnView: false,
   classLoaded: false,
   feedbacks: [],
+  sessions: [],
+  session: null,
   fbLoaded: false,
   pending: false,
   error: null,
@@ -95,8 +98,27 @@ function esc(v) {
 function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function safeSet(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
 function cleanName(raw) { return String(raw || '').replace(/[\/\\#?%]/g, '').replace(/\s+/g, ' ').trim().slice(0, 10); }
-// 한 친구에게는 마음을 한 번만: 보낸 사람+받는 사람으로 문서 이름을 정함 (서버도 같은 규칙으로 확인)
-function pairId(from, to) { return `${from}__${to}`; }
+// 한 시간에 한 친구에게는 마음을 한 번만: 시간+보낸 사람+받는 사람으로 문서 이름을 정함 (서버도 같은 규칙으로 확인)
+function pairId(sid, from, to) { return `${sid}__${from}__${to}`; }
+
+// ---------- 시간(차시) ----------
+const ORD = ['첫', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉', '열', '열한', '열두', '열세', '열네', '열다섯', '열여섯', '열일곱', '열여덟', '열아홉', '스무'];
+function sessTitle(n) { return n <= ORD.length ? `${ORD[n - 1]} 번째 시간` : `${n}번째 시간`; }
+function sessOf(f) { return f.session || 's1'; } // 시간 기능 전에 쓴 소감은 첫 번째 시간으로
+function sessionList() {
+  if (S.sessions.length) return S.sessions;
+  // 아직 시간을 만들지 않았으면 '첫 번째 시간'이 열려 있는 것으로 봄 (이전 방식과 같게)
+  return [{ id: 's1', title: sessTitle(1), order: 1, open: true, ownView: S.allowOwnView, virtual: true }];
+}
+function visibleSessions() { return S.teacherView ? sessionList() : sessionList().filter((x) => x.open); }
+function curSession() {
+  const vis = visibleSessions();
+  let c = vis.find((x) => x.id === S.session);
+  if (!c) { c = vis[vis.length - 1] || null; S.session = c ? c.id : null; }
+  return c;
+}
+function curFbs() { const c = curSession(); return c ? S.feedbacks.filter((f) => sessOf(f) === c.id) : []; }
+function ownViewOpen() { const c = curSession(); return !!(c && c.ownView); }
 function isTeacher() { return S.teacher; }
 function toDate(ts) { return ts && typeof ts.toDate === 'function' ? ts.toDate() : null; }
 function timeOf(fb) { const d = toDate(fb.createdAt); return d ? d.getTime() : 0; }
@@ -119,7 +141,7 @@ function visible(fb) {
   return true;
 }
 function receivedBy(name) {
-  return S.feedbacks.filter((f) => f.to === name && visible(f)).sort((a, b) => timeOf(a) - timeOf(b));
+  return curFbs().filter((f) => f.to === name && visible(f)).sort((a, b) => timeOf(a) - timeOf(b));
 }
 function countable(f) { return f.status !== 'rejected'; }
 function mySentCount() { return S.feedbacks.filter((f) => f.from === S.name && countable(f)).length; }
@@ -176,6 +198,13 @@ function startListeners() {
     S.feedbacks = snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }));
     S.pending = snap.metadata.hasPendingWrites;
     S.fbLoaded = S.fbLoaded || !snap.metadata.fromCache;
+    renderAll();
+  }, onListenError));
+
+  S.unsubs.push(onSnapshot(sessCol, (snap) => {
+    S.sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .filter((x) => typeof x.title === 'string')
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
     renderAll();
   }, onListenError));
 
@@ -294,15 +323,31 @@ function logoutStudent() {
 // ---------- 대시보드 ----------
 function renderDash() {
   const names = allNames();
-  const totalVisible = S.teacherView ? S.feedbacks.length : S.feedbacks.filter(countable).length;
+  const cur = curSession();
+  const here = curFbs();
+  const thisCount = S.teacherView ? here.length : here.filter(countable).length;
   const mine = mySentCount();
 
+  renderSessionBar();
   setNum('statStudents', S.students.length);
-  setNum('statFeedbacks', totalVisible);
-  setNum('statMine', S.teacherView ? '-' : mine);
+  setNum('statFeedbacks', thisCount);
+  setNum('statMine', S.feedbacks.filter(countable).length);
   const lock = $('lockPill');
-  lock.className = `lock-pill ${S.allowOwnView ? 'is-open' : 'is-locked'}`;
-  lock.textContent = S.allowOwnView ? '🔓 내 글 소감: 열람 가능' : '🔒 내 글 소감: 활동 중';
+  const ov = ownViewOpen();
+  lock.className = `lock-pill ${ov ? 'is-open' : 'is-locked'}`;
+  lock.textContent = ov ? '🔓 내 글 소감: 열람 가능' : '🔒 내 글 소감: 활동 중';
+  $('teacherBanner').querySelector('.tag').textContent = cur ? `선생님 모드 · ${cur.title}` : '선생님 모드';
+
+  if (!cur) {
+    $('dashToolbar').hidden = true;
+    $('cardsGrid').innerHTML = '';
+    $('cardsEmpty').hidden = false;
+    $('cardsEmpty').innerHTML = '<span class="big">🗓️</span>아직 열린 시간이 없어요.<br>선생님이 시간을 열면 여기에 나타나요.';
+    renderTree(mine, new Set());
+    renderForest();
+    return;
+  }
+  $('dashToolbar').hidden = false;
 
   // 정렬: 나 → 나머지 명단 순서
   let list = names.slice();
@@ -310,7 +355,7 @@ function renderDash() {
     list = list.filter((n) => n !== S.name);
     if (S.students.includes(S.name)) list.unshift(S.name);
   }
-  const sentTo = new Set(S.feedbacks.filter((f) => f.from === S.name).map((f) => f.to));
+  const sentTo = new Set(here.filter((f) => f.from === S.name).map((f) => f.to));
   const q = S.query.trim();
   list = list.filter((n) => {
     if (q && !n.includes(q)) return false;
@@ -345,7 +390,7 @@ function cardHtml(name, sent, i) {
   const isSelf = !tv && name === S.name;
   const list = receivedBy(name);
   const counted = tv ? list : list.filter(countable);
-  const lockedSelf = isSelf && !S.allowOwnView;
+  const lockedSelf = isSelf && !ownViewOpen();
   const rejected = tv ? list.filter((f) => f.status === 'rejected' || f.status === 'revised').length : 0;
 
   const kicker = tv ? '🧑‍🏫 지도 대상' : isSelf ? '✨ 나의 글' : '📄 친구의 글';
@@ -359,7 +404,7 @@ function cardHtml(name, sent, i) {
   if (tv) {
     foot = `${rejected ? `<span class="fcard-flag">반려·재작성 ${rejected}</span>` : '<span></span>'}<span class="tiny muted">관리하기 →</span>`;
   } else if (isSelf) {
-    foot = `<span class="tiny muted">${S.allowOwnView ? '친구들이 남긴 마음을 열어 봐요' : '활동이 끝나면 열려요'}</span><span class="tiny accent">보기 →</span>`;
+    foot = `<span class="tiny muted">${ownViewOpen() ? '친구들이 남긴 마음을 열어 봐요' : '활동이 끝나면 열려요'}</span><span class="tiny accent">보기 →</span>`;
   } else {
     foot = `<span class="tiny muted">${sent ? '마음을 보냈어요 💛' : '글을 읽었나요?'}</span>
       ${sent
@@ -404,11 +449,13 @@ function renderTree(mine, sentTo) {
 }
 
 function renderForest() {
+  // 모든 시간에 쌓인 마음을 합쳐서 자람
   const total = S.feedbacks.filter(countable).length;
-  const target = Math.max(10, S.students.length * 2);
+  const n = sessionList().length;
+  const target = Math.max(10, S.students.length * 2) * Math.max(1, n);
   const pct = Math.min(100, Math.round((total / target) * 100));
   const f = FORESTS.find((x) => pct < x.upto) || FORESTS[FORESTS.length - 1];
-  $('forestPct').textContent = `울창도 ${pct}% (${total}/${target})`;
+  $('forestPct').textContent = `울창도 ${pct}% · ${n}번의 시간 동안 ${total}개`;
   $('forestBar').style.width = `${pct}%`;
   $('forestIcon').textContent = f.icon;
   $('forestTitle').textContent = f.title;
@@ -420,13 +467,14 @@ function openCompose(target, fb = null) {
   if (!fb) {
     if (!S.name) { toast('먼저 이름을 고르고 들어와 주세요!', '⚠️'); return; }
     if (target === S.name) { toast('내 글에는 소감을 남길 수 없어요.', '🙂'); return; }
-    const already = S.feedbacks.find((f) => f.to === target && f.from === S.name);
+    if (!curSession()) { toast('지금은 열린 시간이 없어요.', '🗓️'); return; }
+    const already = curFbs().find((f) => f.to === target && f.from === S.name);
     if (already) {
       if (isMine(already)) {
-        toast('마음은 한 친구에게 한 번만 보낼 수 있어요. 보낸 마음을 고쳐 볼까요?', '💌', 3200);
+        toast('한 시간에 한 친구에게는 한 번만 보낼 수 있어요. 보낸 마음을 고쳐 볼까요?', '💌', 3200);
         fb = already;
       } else {
-        toast(`${target} 친구에게는 이미 마음을 보냈어요. 한 친구에게 한 번만 보낼 수 있어요.`, '💌', 3200);
+        toast(`이번 시간에 ${target} 친구에게는 이미 마음을 보냈어요.`, '💌', 3200);
         return;
       }
     }
@@ -477,8 +525,10 @@ function submitCompose() {
 
   if (c.mode === 'new') {
     const before = stageIndex(mySentCount());
-    setDoc(doc(fbCol, pairId(S.name, c.target)), {
-      to: c.target, from: S.name, uid: S.user.uid,
+    const sid = curSession()?.id;
+    if (!sid) { toast('지금은 열린 시간이 없어요.', '🗓️'); return; }
+    setDoc(doc(fbCol, pairId(sid, S.name, c.target)), {
+      session: sid, to: c.target, from: S.name, uid: S.user.uid,
       emoji: c.emoji, label: c.label, categories, comment,
       status: 'normal', editedBy: null,
       createdAt: serverTimestamp(), updatedAt: serverTimestamp()
@@ -522,10 +572,10 @@ function renderDetail() {
   const isSelf = !tv && name === S.name;
   const list = receivedBy(name);
   const counted = tv ? list : list.filter(countable);
-  const canView = tv || !isSelf || S.allowOwnView;
+  const canView = tv || !isSelf || ownViewOpen();
 
-  $('detailTitle').textContent = `📜 ${name}의 글`;
-  $('detailWriteBtn').hidden = tv || isSelf || !S.name || S.feedbacks.some((f) => f.to === name && f.from === S.name);
+  $('detailTitle').textContent = `📜 ${name}의 글 · ${curSession()?.title || ''}`;
+  $('detailWriteBtn').hidden = tv || isSelf || !S.name || !curSession() || curFbs().some((f) => f.to === name && f.from === S.name);
 
   const summary = $('detailSummary');
   const box = $('detailList');
@@ -647,25 +697,28 @@ function renderTeacherModal() {
   $('teacherWho').textContent = t ? '이 기기는 선생님 모드예요.' : '비밀번호를 입력해 주세요.';
   if (!t) return;
 
+  renderSessionAdmin();
+  const cur = sessionList().find((x) => x.id === S.session) || sessionList()[sessionList().length - 1];
+  const here = S.feedbacks.filter((f) => sessOf(f) === cur.id);
+  $('tCurTitle').textContent = `📊 ${cur.title} 현황`;
   const names = S.students;
-  const live = S.feedbacks.filter(countable);
+  const live = here.filter(countable);
   const noRecv = names.filter((n) => !live.some((f) => f.to === n));
-  const noSend = names.filter((n) => !S.feedbacks.some((f) => f.from === n));
-  const flagged = S.feedbacks.filter((f) => f.status === 'rejected' || f.status === 'revised');
-  $('tStatFb').textContent = S.feedbacks.length;
+  const noSend = names.filter((n) => !here.some((f) => f.from === n));
+  const flagged = here.filter((f) => f.status === 'rejected' || f.status === 'revised');
+  $('tStatFb').textContent = here.length;
   $('tStatNoRecv').textContent = noRecv.length;
   $('tStatNoSend').textContent = noSend.length;
   $('tStatRej').textContent = flagged.length;
 
   const short = (arr) => arr.slice(0, 15).map(esc).join(', ') + (arr.length > 15 ? ` 외 ${arr.length - 15}명` : '');
   const lines = [];
-  if (noRecv.length && S.feedbacks.length) lines.push(`<div class="line"><b>📭 아직 못 받은</b>${short(noRecv)}</div>`);
-  if (noSend.length && S.feedbacks.length) lines.push(`<div class="line"><b>✏️ 아직 안 쓴</b>${short(noSend)}</div>`);
-  const revised = S.feedbacks.filter((f) => f.status === 'revised').length;
+  if (noRecv.length && here.length) lines.push(`<div class="line"><b>📭 아직 못 받은</b>${short(noRecv)}</div>`);
+  if (noSend.length && here.length) lines.push(`<div class="line"><b>✏️ 아직 안 쓴</b>${short(noSend)}</div>`);
+  const revised = here.filter((f) => f.status === 'revised').length;
   if (revised) lines.push(`<div class="line"><b>🔁 다시 쓴 글</b>${revised}개가 확인을 기다려요.</div>`);
   $('tAttention').innerHTML = lines.join('');
 
-  $('allowToggle').checked = S.allowOwnView;
   const ri = $('rosterInput');
   if (document.activeElement !== ri && !ri.dataset.dirty) ri.value = S.students.join(', ');
 }
@@ -725,9 +778,10 @@ async function changePassword() {
   }
 }
 
-function enterTeacherView() {
+function enterTeacherView(sid) {
   if (!isTeacher()) return;
   S.teacherView = true;
+  if (sid) S.session = sid;
   S.animate = true;
   closeAllModals();
   renderAll();
@@ -737,6 +791,90 @@ function exitTeacherView() {
   S.teacherView = false;
   S.animate = true;
   renderAll();
+}
+
+// ---------- 시간 메뉴 / 관리 ----------
+function renderSessionBar() {
+  const bar = $('sessionBar');
+  const vis = visibleSessions();
+  const cur = curSession();
+  if (!vis.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = vis.map((x) => {
+    const n = S.feedbacks.filter((f) => sessOf(f) === x.id && (S.teacherView || countable(f))).length;
+    const cls = ['sess-pill', cur && x.id === cur.id && 'is-active', !x.open && 'is-closed'].filter(Boolean).join(' ');
+    return `<button class="${cls}" role="tab" aria-selected="${cur && x.id === cur.id}" data-action="pick-session" data-id="${esc(x.id)}">${!x.open ? '🔒 ' : '📖 '}${esc(x.title)}<span class="cnt">${n}</span></button>`;
+  }).join('');
+}
+
+function renderSessionAdmin() {
+  const box = $('sessionAdmin');
+  const curId = (sessionList().find((x) => x.id === S.session) || sessionList()[sessionList().length - 1]).id;
+  box.innerHTML = sessionList().map((x) => {
+    const n = S.feedbacks.filter((f) => sessOf(f) === x.id).length;
+    const id = esc(x.id);
+    return `<div class="sess-row ${x.id === curId ? 'is-cur' : ''}">
+      <div class="sess-top">
+        <div><div class="sess-name">${esc(x.title)}</div><div class="sess-meta">소감 ${n}개 · ${x.open ? '학생에게 보임' : '학생에게 숨김'}</div></div>
+        <div class="sess-btns">
+          <button class="btn btn-indigo btn-sm" data-action="view-session" data-id="${id}">조회</button>
+          ${sessionList().length > 1 ? `<button class="tool-btn del" data-action="delete-session" data-id="${id}" title="이 시간 지우기">🗑️</button>` : ''}
+        </div>
+      </div>
+      <div class="sess-ctrls">
+        <label><span class="switch sm"><input type="checkbox" data-sess="${id}" data-field="open" ${x.open ? 'checked' : ''}><span class="slider"></span></span>학생에게 열기(열람 허용)</label>
+        <label><span class="switch sm"><input type="checkbox" data-sess="${id}" data-field="ownView" ${x.ownView ? 'checked' : ''}><span class="slider"></span></span>자기 글에 받은 소감 공개</label>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function sessData(x) {
+  return { title: x.title, order: x.order, open: !!x.open, ownView: !!x.ownView, createdAt: serverTimestamp() };
+}
+
+async function setSessionField(id, field, value) {
+  const x = sessionList().find((y) => y.id === id);
+  if (!x) return;
+  try {
+    if (x.virtual) await setDoc(doc(sessCol, id), sessData({ ...x, [field]: value }));
+    else await updateDoc(doc(sessCol, id), { [field]: value });
+    const msg = field === 'open'
+      ? (value ? `${x.title}을(를) 학생들에게 열었어요.` : `${x.title}을(를) 학생 화면에서 숨겼어요.`)
+      : (value ? `${x.title}: 자기 글에 받은 소감을 볼 수 있어요.` : `${x.title}: 받은 소감을 다시 잠갔어요.`);
+    toast(msg, value ? '🔓' : '🔒');
+  } catch (err) { writeFailed(err); renderSessionAdmin(); }
+}
+
+async function addSession() {
+  const list = sessionList();
+  const next = list.reduce((m, x) => Math.max(m, x.order || 0), 0) + 1;
+  try {
+    const b = writeBatch(db);
+    list.filter((x) => x.virtual).forEach((x) => b.set(doc(sessCol, x.id), sessData(x)));
+    b.set(doc(sessCol, `s${next}`), sessData({ title: sessTitle(next), order: next, open: true, ownView: false }));
+    await b.commit();
+    S.session = `s${next}`;
+    toast(`${sessTitle(next)}을(를) 만들고 학생들에게 열었어요.`, '🗓️');
+  } catch (err) { writeFailed(err); }
+}
+
+function deleteSession(id) {
+  const x = sessionList().find((y) => y.id === id);
+  if (!x || sessionList().length <= 1) { toast('시간은 하나 이상 있어야 해요.', '🗓️'); return; }
+  const n = S.feedbacks.filter((f) => sessOf(f) === id).length;
+  showConfirm({ icon: '🗓️', title: `${x.title}을(를) 지울까요?`, text: `이 시간에 쌓인 소감 ${n}개도 함께 지워지고 되돌릴 수 없어요. 먼저 결과를 내려받아 두세요.`, yes: '지우기' }, async () => {
+    try {
+      const ids = S.feedbacks.filter((f) => sessOf(f) === id).map((f) => f.id);
+      for (let i = 0; i < ids.length; i += 400) {
+        const b = writeBatch(db);
+        ids.slice(i, i + 400).forEach((fid) => b.delete(doc(fbCol, fid)));
+        await b.commit();
+      }
+      if (!x.virtual) await deleteDoc(doc(sessCol, id));
+      if (S.session === id) S.session = null;
+      toast(`${x.title}을(를) 지웠어요.`, '🗑️');
+    } catch (err) { writeFailed(err); }
+  });
 }
 
 function parseRoster(raw) {
@@ -755,11 +893,14 @@ function saveRoster() {
 function exportRows() {
   const order = allNamesForExport();
   const rows = [];
-  order.forEach((to) => {
-    S.feedbacks.filter((f) => f.to === to).sort((a, b) => timeOf(a) - timeOf(b)).forEach((f) => rows.push(f));
+  sessionList().forEach((se) => {
+    order.forEach((to) => {
+      S.feedbacks.filter((f) => sessOf(f) === se.id && f.to === to).sort((a, b) => timeOf(a) - timeOf(b)).forEach((f) => rows.push(f));
+    });
   });
   return { order, rows };
 }
+function sessName(id) { return (sessionList().find((x) => x.id === id) || {}).title || id; }
 function allNamesForExport() {
   const list = [...S.students];
   S.feedbacks.forEach((f) => { if (!list.includes(f.to)) list.push(f.to); });
@@ -776,9 +917,9 @@ function exportCsv() {
   const { rows } = exportRows();
   if (!rows.length) { toast('아직 모인 소감이 없어요.', 'ℹ️'); return; }
   const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  let csv = '﻿글 쓴 친구,보낸 친구,이모티콘,느낌,항목,소감,상태,작성 시간\n';
+  let csv = '﻿시간,글 쓴 친구,보낸 친구,이모티콘,느낌,항목,소감,상태,작성 시간\n';
   rows.forEach((f) => {
-    csv += [f.to, f.from, f.emoji, f.label, (f.categories || []).join(', '), f.comment, STATUS_KO[f.status] || '정상', fullTime(f)].map(q).join(',') + '\n';
+    csv += [sessName(sessOf(f)), f.to, f.from, f.emoji, f.label, (f.categories || []).join(', '), f.comment, STATUS_KO[f.status] || '정상', fullTime(f)].map(q).join(',') + '\n';
   });
   download(csv, `우마시_마음나누기_${today()}.csv`, 'text/csv;charset=utf-8');
   toast('엑셀(CSV) 파일을 내려받았어요!', '📥');
@@ -789,15 +930,19 @@ function exportTxt() {
   if (!S.feedbacks.length) { toast('아직 모인 소감이 없어요.', 'ℹ️'); return; }
   const line = '='.repeat(46);
   let t = `${line}\n [우마시] 우리들의 마음 나누기 - 활동 결과 보고서\n 날짜: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}\n 학생 수: ${S.students.length}명 · 모인 마음: ${S.feedbacks.length}개\n${line}\n\n`;
-  order.forEach((to, i) => {
-    const list = S.feedbacks.filter((f) => f.to === to).sort((a, b) => timeOf(a) - timeOf(b));
-    t += `${'-'.repeat(46)}\n▶ [${i + 1}] ${to}의 글에 모인 마음 (${list.length}개)\n${'-'.repeat(46)}\n`;
-    if (!list.length) t += '  (아직 소감이 없습니다)\n\n';
-    list.forEach((f, k) => {
-      const flag = f.status && f.status !== 'normal' ? ` <${STATUS_KO[f.status]}>` : '';
-      t += `  ${k + 1}. [${f.from}] ${f.emoji} (${f.label}) ${(f.categories || []).map((c) => `[${c}]`).join(' ')}${flag}\n     "${f.comment}" (${fullTime(f)})\n`;
+  sessionList().forEach((se) => {
+    const inSess = S.feedbacks.filter((f) => sessOf(f) === se.id);
+    t += `\n####  ${se.title} (${inSess.length}개)  ####\n\n`;
+    order.forEach((to, i) => {
+      const list = inSess.filter((f) => f.to === to).sort((a, b) => timeOf(a) - timeOf(b));
+      if (!list.length) return;
+      t += `${'-'.repeat(46)}\n▶ ${to}의 글에 모인 마음 (${list.length}개)\n${'-'.repeat(46)}\n`;
+      list.forEach((f, k) => {
+        const flag = f.status && f.status !== 'normal' ? ` <${STATUS_KO[f.status]}>` : '';
+        t += `  ${k + 1}. [${f.from}] ${f.emoji} (${f.label}) ${(f.categories || []).map((c) => `[${c}]`).join(' ')}${flag}\n     "${f.comment}" (${fullTime(f)})\n`;
+      });
+      t += '\n';
     });
-    if (list.length) t += '\n';
   });
   download(t, `우마시_학급소감모음_${today()}.txt`, 'text/plain;charset=utf-8');
   toast('보고서 파일을 내려받았어요!', '📥');
@@ -961,7 +1106,11 @@ document.addEventListener('click', (e) => {
     case 'set-status': setStatus(id, el.dataset.status); break;
     case 'open-teacher': $('teacherDenied').hidden = true; renderTeacherModal(); openModal('teacherModal'); if (!S.teacher) setTimeout(() => $('teacherPw').focus(), 120); break;
     case 'teacher-logout': teacherLogout(); break;
-    case 'enter-teacher-view': enterTeacherView(); break;
+    case 'enter-teacher-view': enterTeacherView(S.session); break;
+    case 'view-session': enterTeacherView(el.dataset.id); break;
+    case 'pick-session': S.session = el.dataset.id; S.animate = true; renderAll(); break;
+    case 'add-session': addSession(); break;
+    case 'delete-session': deleteSession(el.dataset.id); break;
     case 'exit-teacher-view': exitTeacherView(); break;
     case 'sample-roster': $('rosterInput').value = SAMPLE_ROSTER.join(', '); $('rosterInput').dataset.dirty = '1'; break;
     case 'save-roster': saveRoster(); break;
@@ -1001,10 +1150,9 @@ $('pwChangeForm').addEventListener('submit', (e) => { e.preventDefault(); change
 $('searchInput').addEventListener('input', (e) => { S.query = e.target.value; renderDash(); });
 $('commentInput').addEventListener('input', updateCharCount);
 $('rosterInput').addEventListener('input', (e) => { e.target.dataset.dirty = '1'; });
-$('allowToggle').addEventListener('change', (e) => {
-  const on = e.target.checked;
-  setDoc(classRef, { allowOwnView: on }, { merge: true }).catch(writeFailed);
-  toast(on ? '이제 학생들이 자기 글에 모인 소감을 볼 수 있어요.' : '자기 글 소감 보기를 다시 잠갔어요.', on ? '🔓' : '🔒');
+$('sessionAdmin').addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset.sess) setSessionField(t.dataset.sess, t.dataset.field, t.checked);
 });
 window.addEventListener('online', renderSync);
 window.addEventListener('offline', renderSync);
