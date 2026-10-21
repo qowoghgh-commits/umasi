@@ -49,6 +49,7 @@ const FORESTS = [
 ];
 const SAMPLE_ROSTER = ['강민준', '김서아', '김하늘', '박서준', '송지우', '이민지', '임도현', '정예은', '최시우', '한소율'];
 const NAME_KEY = 'umasi.name';
+try { localStorage.removeItem(NAME_KEY); } catch {} // 예전 버전이 기억해 둔 이름 지우기
 const MAX_COMMENT = 80;
 
 // ---------- Firebase ----------
@@ -69,7 +70,7 @@ const sessionRef = () => doc(classRef, 'teacherSessions', S.user.uid);
 // ---------- 상태 ----------
 const S = {
   user: null,
-  name: safeGet(NAME_KEY),
+  name: null, // 시작 화면에서는 항상 이름을 새로 고름 (이전에 들어온 학생으로 자동 입장하지 않음)
   students: [],
   allowOwnView: false,
   classLoaded: false,
@@ -303,7 +304,6 @@ async function enterAs(rawName) {
   }
   S.name = name;
   S.animate = true;
-  safeSet(NAME_KEY, name);
   $('nameSelect').value = '';
   renderAll();
   window.scrollTo({ top: 0 });
