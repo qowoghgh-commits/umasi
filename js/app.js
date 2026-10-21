@@ -808,13 +808,14 @@ function renderSessionBar() {
 
 function renderSessionAdmin() {
   const box = $('sessionAdmin');
+  if (box.contains(document.activeElement) && document.activeElement.dataset.rename) return; // 이름 고치는 중엔 그대로
   const curId = (sessionList().find((x) => x.id === S.session) || sessionList()[sessionList().length - 1]).id;
   box.innerHTML = sessionList().map((x) => {
     const n = S.feedbacks.filter((f) => sessOf(f) === x.id).length;
     const id = esc(x.id);
     return `<div class="sess-row ${x.id === curId ? 'is-cur' : ''}">
       <div class="sess-top">
-        <div><div class="sess-name">${esc(x.title)}</div><div class="sess-meta">소감 ${n}개 · ${x.open ? '학생에게 보임' : '학생에게 숨김'}</div></div>
+        <div class="sess-title-wrap"><label class="sess-name-label"><input class="sess-name-input" data-rename="${id}" value="${esc(x.title)}" maxlength="30" aria-label="시간 이름 (눌러서 고치기)"><span class="sess-edit" aria-hidden="true">✏️</span></label><div class="sess-meta">소감 ${n}개 · ${x.open ? '학생에게 보임' : '학생에게 숨김'}</div></div>
         <div class="sess-btns">
           <button class="btn btn-indigo btn-sm" data-action="view-session" data-id="${id}">조회</button>
           ${sessionList().length > 1 ? `<button class="tool-btn del" data-action="delete-session" data-id="${id}" title="이 시간 지우기">🗑️</button>` : ''}
@@ -842,6 +843,19 @@ async function setSessionField(id, field, value) {
       ? (value ? `${x.title}을(를) 학생들에게 열었어요.` : `${x.title}을(를) 학생 화면에서 숨겼어요.`)
       : (value ? `${x.title}: 자기 글에 받은 소감을 볼 수 있어요.` : `${x.title}: 받은 소감을 다시 잠갔어요.`);
     toast(msg, value ? '🔓' : '🔒');
+  } catch (err) { writeFailed(err); renderSessionAdmin(); }
+}
+
+async function renameSession(id, raw) {
+  const x = sessionList().find((y) => y.id === id);
+  if (!x) return;
+  const title = String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 30);
+  if (!title) { toast('시간 이름을 적어 주세요.', '✏️'); renderSessionAdmin(); return; }
+  if (title === x.title) return;
+  try {
+    if (x.virtual) await setDoc(doc(sessCol, id), sessData({ ...x, title }));
+    else await updateDoc(doc(sessCol, id), { title });
+    toast(`시간 이름을 '${title}'(으)로 바꿨어요.`, '✏️');
   } catch (err) { writeFailed(err); renderSessionAdmin(); }
 }
 
@@ -1139,6 +1153,12 @@ document.addEventListener('pointerdown', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.dataset && e.target.dataset.rename) { e.preventDefault(); e.target.blur(); return; }
+  if (e.key === 'Escape' && e.target.dataset && e.target.dataset.rename) {
+    const x = sessionList().find((y) => y.id === e.target.dataset.rename);
+    if (x) e.target.value = x.title;
+    e.target.blur(); e.stopPropagation(); return;
+  }
   if (e.key === 'Escape') { const m = topModal(); if (m) closeModal(m.id); }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.fcard')) { e.preventDefault(); openDetail(e.target.dataset.name); }
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.id === 'commentInput') submitCompose();
@@ -1152,6 +1172,7 @@ $('commentInput').addEventListener('input', updateCharCount);
 $('rosterInput').addEventListener('input', (e) => { e.target.dataset.dirty = '1'; });
 $('sessionAdmin').addEventListener('change', (e) => {
   const t = e.target;
+  if (t.dataset.rename) { renameSession(t.dataset.rename, t.value); return; }
   if (t.dataset.sess) setSessionField(t.dataset.sess, t.dataset.field, t.checked);
 });
 window.addEventListener('online', renderSync);
