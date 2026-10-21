@@ -565,3 +565,32 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 }
 .login-form .roster-empty { margin: 0; }
 #enterBtn:disabled { animation: none; }
+
+/* ===== 시간(차시) 메뉴 ===== */
+.session-bar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin-bottom: 4px; scrollbar-width: thin; }
+.session-bar:empty { display: none; }
+.sess-pill {
+  flex-shrink: 0; border: 2px solid var(--line-2); background: #fff; color: var(--ink-2);
+  border-radius: 999px; padding: 8px 16px; font-family: var(--font-title); font-size: 16px;
+  display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+}
+.sess-pill:hover { border-color: var(--amber); transform: translateY(-1px); }
+.sess-pill.is-active { background: linear-gradient(135deg, #FFB938, var(--coral)); border-color: transparent; color: #fff; box-shadow: 0 6px 14px rgba(247, 116, 95, .3); animation: picked .35s cubic-bezier(.3, 1.6, .5, 1); }
+.sess-pill .cnt { font-family: var(--font-body); font-size: 11px; font-weight: 800; background: rgba(0,0,0,.08); border-radius: 999px; padding: 1px 7px; }
+.sess-pill.is-active .cnt { background: rgba(255,255,255,.3); }
+.sess-pill.is-closed { border-style: dashed; color: var(--ink-3); }
+.sess-pill.is-closed.is-active { color: #fff; }
+
+.sess-admin { display: grid; gap: 8px; margin-top: 4px; }
+.sess-row { background: #fff; border: 1px solid #E5E5FA; border-radius: 14px; padding: 10px 12px; display: grid; gap: 8px; }
+.sess-row.is-cur { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(91, 91, 214, .12); }
+.sess-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sess-name { font-family: var(--font-title); font-size: 16px; }
+.sess-meta { font-size: 11px; color: var(--ink-3); font-weight: 700; }
+.sess-ctrls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.sess-ctrls label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.switch.sm { width: 40px; height: 22px; }
+.switch.sm .slider::before { width: 16px; height: 16px; }
+.switch.sm input:checked + .slider::before { transform: translateX(18px); }
+.sess-btns { display: flex; gap: 4px; margin-left: auto; }
+.t-cur { margin: 4px 2px 8px; color: var(--indigo); }
