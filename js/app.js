@@ -500,13 +500,17 @@ function renderForest() {
 }
 
 function renderStageList() {
+  const tree = $('treeStageList');
+  if (tree && !tree.dataset.done) {
+    tree.dataset.done = '1';
+    tree.innerHTML = `<p class="stage-head">🌱 내 마음 나무 <span>내가 보낸 소감</span></p>
+    <ul>${STAGES.map((st) => `<li><b>${Array.from(st.icon)[0]}</b> ${esc(st.level.replace(/^Lv\.\S+ /, ''))}<span>${st.min}개~</span></li>`).join('')}</ul>`;
+  }
   const box = $('stageList');
   if (!box || box.dataset.n === String(forestBase())) return;
   box.dataset.n = String(forestBase());
   const n = forestBase();
-  box.innerHTML = `<p class="stage-head">🌱 내 마음 나무 <span>내가 보낸 소감</span></p>
-    <ul>${STAGES.map((st) => `<li><b>${Array.from(st.icon)[0]}</b> ${esc(st.level.replace(/^Lv\.\S+ /, ''))}<span>${st.min}개~</span></li>`).join('')}</ul>
-    <p class="stage-head">🌳 우리 반 마음 숲 <span>반 전체 소감</span></p>
+  box.innerHTML = `<p class="stage-head">🌳 우리 반 마음 숲 <span>반 전체 소감</span></p>
     <ul>${FORESTS.map((f) => `<li><b>${Array.from(f.icon)[0]}</b> ${esc(f.title)}<span>${f.per * n}개~</span></li>`).join('')}</ul>`;
 }
 
