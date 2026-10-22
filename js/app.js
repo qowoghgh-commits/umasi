@@ -33,20 +33,37 @@ const STARTERS = [
   '~한 부분이 인상 깊었어.', '나도 ~한 적이 있어서 공감됐어.',
   '~가 궁금해!', '표현이 생생해서 눈앞에 그려졌어.', '다음 이야기도 기대돼!'
 ];
+// 내 마음 나무: 지금까지(모든 시간) 보낸 소감 수로 자람 — 11단계
 const STAGES = [
-  { min: 0,  max: 1,   icon: '🌱',   level: 'Lv.1 씨앗',        title: '마음의 씨앗',          desc: '친구들에게 다정한 마음을 선물해 새싹을 틔워보세요!' },
-  { min: 1,  max: 3,   icon: '🌿',   level: 'Lv.2 새싹',        title: '파릇파릇 새싹',        desc: '첫 마음을 선물했어요! 친구가 미소 짓고 있어요.' },
-  { min: 3,  max: 5,   icon: '🌷',   level: 'Lv.3 꽃봉오리',    title: '두근두근 꽃봉오리',    desc: '따뜻한 마음이 점점 모여 예쁜 꽃을 피우려 해요!' },
-  { min: 5,  max: 8,   icon: '🌸',   level: 'Lv.4 활짝 핀 꽃',  title: '활짝 핀 향기로운 꽃',  desc: '우리 반에 다정한 마음 향기가 가득 퍼지고 있어요!' },
-  { min: 8,  max: 12,  icon: '🌳',   level: 'Lv.5 사랑 나무',   title: '든든한 사랑 나무',     desc: '많은 친구들에게 든든하고 큰 힘이 되어주고 있어요!' },
-  { min: 12, max: Infinity, icon: '🌈✨', level: 'Lv.MAX 무지개 숲', title: '찬란한 무지개 숲', desc: '최고의 마음 나눔 천사! 반 전체가 따뜻함으로 물들었어요!' }
-];
+  { min: 0,   icon: '🌰',   level: 'Lv.1 씨앗',          title: '마음의 씨앗',          desc: '친구들에게 다정한 마음을 선물해 씨앗을 깨워 보세요!' },
+  { min: 5,   icon: '🌱',   level: 'Lv.2 새싹',          title: '빼꼼 올라온 새싹',      desc: '마음 5개! 땅을 뚫고 작은 새싹이 고개를 내밀었어요.' },
+  { min: 10,  icon: '☘️',   level: 'Lv.3 떡잎',          title: '파릇파릇 떡잎',        desc: '떡잎이 활짝 펴졌어요. 꾸준함이 멋져요!' },
+  { min: 18,  icon: '🌿',   level: 'Lv.4 어린 줄기',     title: '쑥쑥 자라는 줄기',      desc: '줄기가 튼튼해지고 있어요. 친구들이 힘을 얻고 있어요.' },
+  { min: 28,  icon: '🌷',   level: 'Lv.5 꽃봉오리',      title: '두근두근 꽃봉오리',    desc: '따뜻한 마음이 모여 꽃을 피우려 해요!' },
+  { min: 40,  icon: '🌸',   level: 'Lv.6 첫 꽃',         title: '활짝 핀 첫 꽃',        desc: '첫 꽃이 피었어요! 다정한 향기가 퍼지고 있어요.' },
+  { min: 55,  icon: '💐',   level: 'Lv.7 꽃다발',        title: '향기로운 꽃다발',      desc: '꽃이 한가득! 친구들에게 꽃다발 같은 존재예요.' },
+  { min: 75,  icon: '🌳',   level: 'Lv.8 어린 나무',     title: '든든한 어린 나무',      desc: '그늘을 만들어 주는 나무가 되었어요.' },
+  { min: 100, icon: '🍎',   level: 'Lv.9 열매 나무',     title: '열매 맺은 나무',        desc: '마음 100개! 정성이 달콤한 열매로 맺혔어요.' },
+  { min: 130, icon: '🌲🌳', level: 'Lv.10 사랑의 숲',    title: '함께 자라는 사랑의 숲', desc: '혼자가 아닌 숲이 되었어요. 반 전체가 따뜻해져요.' },
+  { min: 170, icon: '🌈✨', level: 'Lv.MAX 무지개 숲',   title: '찬란한 무지개 숲',      desc: '최고의 마음 나눔 천사! 정말 대단해요!' }
+].map((st, i, arr) => ({ ...st, max: arr[i + 1] ? arr[i + 1].min : Infinity }));
+
+// 우리 반 마음 숲: 모든 시간의 소감을 합쳐 '친구 한 명당 평균 몇 개'로 자람 — 11단계
 const FORESTS = [
-  { upto: 25,  icon: '🏡🌱',     title: '싹트는 작은 정원',        desc: '친구들의 따뜻한 마음들이 모이기 시작했어요!' },
-  { upto: 60,  icon: '🏡🌿🌷',   title: '꽃피는 우리 반 숲길',     desc: '여기저기 다정한 칭찬과 꽃이 피어나고 있어요.' },
-  { upto: 90,  icon: '🌳🌸🌳',   title: '풍성한 우리들의 사랑 숲', desc: '서로를 향한 따뜻한 마음이 가득 들어찼어요!' },
-  { upto: 101, icon: '🏰🌈🌲💖', title: '환상적인 마음 원더랜드',  desc: '온 교실이 서로를 응원하는 사랑과 감동으로 빛나요!' }
+  { per: 0,  icon: '🏜️',       title: '아직 빈 들판',           desc: '첫 마음을 기다리고 있어요. 우리 반의 숲을 함께 키워 봐요!' },
+  { per: 1,  icon: '🌱',        title: '싹트는 들판',             desc: '여기저기 작은 새싹이 돋아나기 시작했어요.' },
+  { per: 2,  icon: '🌱🌿',      title: '새싹 정원',               desc: '새싹들이 모여 작은 정원이 되었어요.' },
+  { per: 4,  icon: '🌿🌷',      title: '꽃이 피는 정원',          desc: '다정한 칭찬 속에서 꽃이 피어나요.' },
+  { per: 6,  icon: '🌷🌸🌼',    title: '알록달록 꽃밭',           desc: '서로를 향한 마음이 알록달록 꽃밭이 되었어요.' },
+  { per: 9,  icon: '🌳🌸🌳',    title: '어린 나무 숲길',          desc: '나무가 자라 숲길이 생겼어요.' },
+  { per: 12, icon: '🌳🌳🌷🌳',  title: '푸른 마을 숲',            desc: '우리 반 모두가 쉬어 갈 수 있는 숲이에요.' },
+  { per: 16, icon: '🌳🍎🌳🍎',  title: '열매 맺는 숲',            desc: '쌓인 마음들이 열매로 주렁주렁 열렸어요.' },
+  { per: 20, icon: '🌲🐦🌳🦋',  title: '새들이 노래하는 숲',      desc: '새와 나비가 찾아오는 생기 넘치는 숲이에요.' },
+  { per: 25, icon: '🏡🌳🌈🌳',  title: '무지개 마음 숲',          desc: '숲 위에 무지개가 떴어요!' },
+  { per: 30, icon: '🏰🌈🌲💖',  title: '환상적인 마음 원더랜드',  desc: '온 교실이 서로를 응원하는 사랑과 감동으로 빛나요!' }
 ];
+function forestBase() { return Math.max(10, S.students.length); }
+function forestIndex(total) { const n = forestBase(); let i = 0; FORESTS.forEach((f, k) => { if (total >= f.per * n) i = k; }); return i; }
 const SAMPLE_ROSTER = ['강민준', '김서아', '김하늘', '박서준', '송지우', '이민지', '임도현', '정예은', '최시우', '한소율'];
 const NAME_KEY = 'umasi.name';
 try { localStorage.removeItem(NAME_KEY); } catch {} // 예전 버전이 기억해 둔 이름 지우기
@@ -449,17 +466,36 @@ function renderTree(mine, sentTo) {
 }
 
 function renderForest() {
-  // 모든 시간에 쌓인 마음을 합쳐서 자람
+  // 모든 시간에 쌓인 마음을 합쳐서 자람 (친구 한 명당 평균 소감 수 기준)
   const total = S.feedbacks.filter(countable).length;
-  const n = sessionList().length;
-  const target = Math.max(10, S.students.length * 2) * Math.max(1, n);
-  const pct = Math.min(100, Math.round((total / target) * 100));
-  const f = FORESTS.find((x) => pct < x.upto) || FORESTS[FORESTS.length - 1];
-  $('forestPct').textContent = `울창도 ${pct}% · ${n}번의 시간 동안 ${total}개`;
-  $('forestBar').style.width = `${pct}%`;
-  $('forestIcon').textContent = f.icon;
+  const n = forestBase();
+  const idx = forestIndex(total);
+  const f = FORESTS[idx];
+  const next = FORESTS[idx + 1];
+  const lo = f.per * n;
+  const hi = next ? next.per * n : lo;
+  const pct = next ? Math.round(((total - lo) / (hi - lo)) * 100) : 100;
+  $('forestPct').textContent = `Lv.${idx + 1}${next ? '' : ' MAX'} · 쌓인 마음 ${total}개`;
+  $('forestBar').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  const icon = $('forestIcon');
+  if (icon.textContent !== f.icon) {
+    if (icon.textContent) { icon.classList.remove('pop'); void icon.offsetWidth; icon.classList.add('pop'); }
+    icon.textContent = f.icon;
+  }
   $('forestTitle').textContent = f.title;
-  $('forestDesc').textContent = f.desc;
+  $('forestDesc').textContent = next ? `${f.desc} (다음 단계까지 ${hi - total}개)` : f.desc;
+  renderStageList();
+}
+
+function renderStageList() {
+  const box = $('stageList');
+  if (!box || box.dataset.n === String(forestBase())) return;
+  box.dataset.n = String(forestBase());
+  const n = forestBase();
+  box.innerHTML = `<p class="stage-head">🌱 내 마음 나무 <span>내가 보낸 소감</span></p>
+    <ul>${STAGES.map((st) => `<li><b>${Array.from(st.icon)[0]}</b> ${esc(st.level.replace(/^Lv\.\S+ /, ''))}<span>${st.min}개~</span></li>`).join('')}</ul>
+    <p class="stage-head">🌳 우리 반 마음 숲 <span>반 전체 소감</span></p>
+    <ul>${FORESTS.map((f) => `<li><b>${Array.from(f.icon)[0]}</b> ${esc(f.title)}<span>${f.per * n}개~</span></li>`).join('')}</ul>`;
 }
 
 // ---------- 마음 쓰기 / 고치기 ----------
@@ -525,6 +561,7 @@ function submitCompose() {
 
   if (c.mode === 'new') {
     const before = stageIndex(mySentCount());
+    const forestBefore = forestIndex(S.feedbacks.filter(countable).length);
     const sid = curSession()?.id;
     if (!sid) { toast('지금은 열린 시간이 없어요.', '🗓️'); return; }
     setDoc(doc(fbCol, pairId(sid, S.name, c.target)), {
@@ -537,6 +574,12 @@ function submitCompose() {
     toast(`${c.target} 친구에게 마음이 전달되었어요!`, '💖');
     burst([c.emoji, '💛', '✨']);
     setTimeout(() => {
+      const fAfter = forestIndex(S.feedbacks.filter(countable).length);
+      if (fAfter > forestBefore) {
+        toast(`우리 반 마음 숲이 [${FORESTS[fAfter].title}]으로 자랐어요! ${FORESTS[fAfter].icon}`, '🌳', 3500);
+        burst(['🌳', '🌸', '🦋', '💚']);
+        return;
+      }
       const after = stageIndex(mySentCount());
       if (after > before) {
         const st = STAGES[after];
