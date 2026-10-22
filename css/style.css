@@ -608,3 +608,12 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .sess-name-input:focus { border-style: solid; border-color: var(--indigo); background: #F6F6FF; }
 .sess-edit { font-size: 12px; opacity: .55; }
 .sess-name-input:focus + .sess-edit { opacity: 0; }
+
+/* 성장 단계 목록 */
+.stage-list .stage-head { margin: 10px 0 4px; font-weight: 800; color: var(--ink); display: flex; justify-content: space-between; }
+.stage-list .stage-head span { font-weight: 600; color: var(--ink-3); font-size: 11px; }
+.stage-list ul { margin: 0; grid-template-columns: 1fr; gap: 3px; }
+.stage-list li { justify-content: flex-start; gap: 6px; }
+.stage-list li b { width: 20px; text-align: center; font-weight: 400; }
+.stage-list li span { margin-left: auto; white-space: nowrap; }
+.forest-icon.pop { animation: pop .7s cubic-bezier(.3, 1.6, .5, 1); }
