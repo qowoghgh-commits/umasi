@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "type": "rich",
+  "provider_name": "우마시",
+  "provider_url": "https://umasi-pi.vercel.app/",
+  "title": "우마시 · 우리들의 마음 나누기",
+  "width": 1280,
+  "height": 800,
+  "html": "<iframe src=\"https://umasi-pi.vercel.app/\" width=\"1280\" height=\"800\" style=\"border:0;width:100%;height:100%\" allow=\"clipboard-write; fullscreen\" allowfullscreen title=\"우마시\"></iframe>"
+}
