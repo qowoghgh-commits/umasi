@@ -617,3 +617,23 @@ button { cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action
 .stage-list li b { width: 20px; text-align: center; font-weight: 400; }
 .stage-list li span { margin-left: auto; white-space: nowrap; }
 .forest-icon.pop { animation: pop .7s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* 학생 비밀번호 */
+.pw-area { display: grid; gap: 8px; text-align: left; animation: rise .35s ease both; }
+.pw-hint { margin: 0; font-size: 14px; font-weight: 700; color: var(--ink-2); }
+.pw-hint.new { color: var(--rose); }
+.pw-field { position: relative; }
+.pw-field .input { width: 100%; padding-right: 52px; }
+.pw-eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; font-size: 20px; cursor: pointer; padding: 6px; opacity: .7; }
+.pw-eye:hover { opacity: 1; }
+.pw-area.shake { animation: shake .4s; }
+.pw-admin { display: grid; gap: 6px; max-height: 340px; overflow: auto; padding-right: 2px; }
+.pw-row-s { display: grid; grid-template-columns: minmax(56px, 1fr) minmax(70px, 1.2fr) auto auto; gap: 6px; align-items: center; background: #fff; border: 1px solid #E5E5FA; border-radius: 12px; padding: 6px 8px; font-size: 13px; }
+.pw-row-s b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pw-row-s .pw-val { font-family: ui-monospace, monospace; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pw-row-s .pw-val.none { font-family: inherit; color: var(--ink-3); }
+.pw-row-s input { width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid #D9D9F2; border-radius: 8px; font-size: 13px; }
+.pw-row-s .mini { border: 1px solid #D9D9F2; background: #F4F4FF; border-radius: 8px; padding: 5px 8px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.pw-row-s .mini.rose { background: #FFF1F3; border-color: #F7C9D1; color: #C2405A; }
+.pw-show { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.pw-row-s .mini:disabled { opacity: .4; cursor: default; }
