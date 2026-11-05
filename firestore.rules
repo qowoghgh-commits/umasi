@@ -26,6 +26,20 @@ service cloud.firestore {
       return v is string && v.size() > 0 && v.size() <= 20;
     }
 
+    function isStudentPw(v) {
+      return v is string && v.size() >= 4 && v.size() <= 12;
+    }
+
+    // 이 기기(uid)가 '보낸 사람' 학생의 비밀번호로 들어와 있는지
+    // (선생님이 그 학생 비밀번호를 초기화·수정하면 자동으로 풀림)
+    function isStudentAs(classId, name) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/classes/$(classId)/studentSessions/$(request.auth.uid))
+        && get(/databases/$(database)/documents/classes/$(classId)/studentSessions/$(request.auth.uid)).data.name == name
+        && get(/databases/$(database)/documents/classes/$(classId)/studentSessions/$(request.auth.uid)).data.pw
+           == get(/databases/$(database)/documents/classes/$(classId)/studentPw/$(name)).data.pw;
+    }
+
     // 소감 문서 모양 검사
     function validFeedback(d) {
       return d.keys().hasOnly(['session', 'to', 'from', 'uid', 'emoji', 'label', 'categories', 'comment',
@@ -79,6 +93,7 @@ service cloud.firestore {
              )
           && validFeedback(request.resource.data)
           && request.resource.data.uid == request.auth.uid
+          && isStudentAs(classId, request.resource.data.from)
           && request.resource.data.to != request.resource.data.from
           && request.resource.data.status == 'normal'
           && request.resource.data.createdAt == request.time;
@@ -86,6 +101,7 @@ service cloud.firestore {
         // 학생: 자기가 쓴 글만 고치기 (받는 친구·보낸 이름·상태는 마음대로 못 바꿈)
         allow update: if signedIn()
           && resource.data.uid == request.auth.uid
+          && isStudentAs(classId, resource.data.from)
           && validFeedback(request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['emoji', 'label', 'categories', 'comment', 'status', 'editedBy', 'updatedAt'])
@@ -95,7 +111,8 @@ service cloud.firestore {
              );
 
         // 학생: 자기가 쓴 글만 지우기
-        allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+        allow delete: if signedIn() && resource.data.uid == request.auth.uid
+          && isStudentAs(classId, resource.data.from);
       }
 
       // 시간(차시) 메뉴 — 누구나 읽고, 선생님만 만들고 바꾸고 지움
@@ -109,6 +126,42 @@ service cloud.firestore {
           && request.resource.data.order is int
           && request.resource.data.open is bool
           && request.resource.data.ownView is bool;
+      }
+
+      // 학생 개별 비밀번호 — 선생님만 볼 수 있음.
+      // 학생은 아직 비밀번호가 없을 때 처음 한 번만 만들 수 있고, 초기화·수정은 선생님만.
+      match /studentPw/{name} {
+        allow read: if isTeacher(classId);
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['pw', 'at'])
+          && isStudentPw(request.resource.data.pw)
+          && request.resource.data.at == request.time;
+        allow update: if isTeacher(classId)
+          && request.resource.data.keys().hasOnly(['pw', 'at'])
+          && isStudentPw(request.resource.data.pw);
+        allow delete: if isTeacher(classId);
+      }
+
+      // 비밀번호를 만들었는지 표시 (누구나 볼 수 있음, 비밀번호 내용은 없음)
+      match /studentPwSet/{name} {
+        allow read: if signedIn();
+        allow create, update: if signedIn()
+          && request.resource.data.keys().hasOnly(['v'])
+          && request.resource.data.v is string && request.resource.data.v.size() <= 40
+          && existsAfter(/databases/$(database)/documents/classes/$(classId)/studentPw/$(name))
+          && (!exists(/databases/$(database)/documents/classes/$(classId)/studentPwSet/$(name)) || isTeacher(classId));
+        allow delete: if isTeacher(classId);
+      }
+
+      // 학생 입장 표시 (기기별). 그 학생의 비밀번호가 맞아야만 만들 수 있음
+      match /studentSessions/{uid} {
+        allow read, delete: if signedIn() && request.auth.uid == uid;
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['name', 'pw', 'at'])
+          && isName(request.resource.data.name)
+          && request.resource.data.at == request.time
+          && request.resource.data.pw == getAfter(/databases/$(database)/documents/classes/$(classId)/studentPw/$(request.resource.data.name)).data.pw;
       }
 
       // 선생님 비밀번호 — 아무도 읽을 수 없음. 처음 한 번만 만들 수 있고, 이후엔 선생님만 바꿀 수 있음

@@ -79,7 +79,7 @@
           <p class="hero-sub"><b>우</b>리들의 <b>마</b>음 나누기 <span aria-hidden="true">·</span> <b>시</b>작해 볼까요?</p>
         </div>
         <h2 class="title-lg hello">반가워요! 누구인가요?</h2>
-        <p class="muted">목록을 스크롤해서 내 이름을 찾고, 들어가기를 눌러요.</p>
+        <p class="muted">목록을 스크롤해서 내 이름을 찾고, 내 비밀번호를 적어 들어가요.</p>
 
         <form id="loginForm" class="login-form" autocomplete="off">
           <label for="nameSelect" class="sr-only">내 이름 고르기</label>
@@ -90,8 +90,17 @@
             <span class="name-select-arrow" aria-hidden="true">▾</span>
           </div>
           <p id="rosterEmpty" class="roster-empty" hidden>아직 명단이 없어요. 선생님이 명단을 등록하면 이름을 고를 수 있어요.</p>
+          <div id="pwArea" class="pw-area" hidden>
+            <p id="pwHint" class="pw-hint"></p>
+            <div class="pw-field">
+              <input id="studentPw" class="input input-lg" type="password" maxlength="12" placeholder="비밀번호" autocomplete="off" aria-label="비밀번호">
+              <button type="button" class="pw-eye" data-action="toggle-pw" aria-label="비밀번호 보기">👁️</button>
+            </div>
+            <input id="studentPw2" class="input input-lg" type="password" maxlength="12" placeholder="비밀번호 한 번 더" autocomplete="off" aria-label="비밀번호 한 번 더" hidden>
+            <p id="pwDenied" class="note note-rose small" hidden></p>
+          </div>
           <button type="submit" class="btn btn-primary btn-lg btn-block" id="enterBtn">
-            마음 나누러 가기 <span aria-hidden="true">→</span>
+            <span class="enter-label">마음 나누러 가기</span> <span aria-hidden="true">→</span>
           </button>
         </form>
 
@@ -299,6 +308,19 @@
           <div class="row-between">
             <button class="link-btn" data-action="sample-roster">+ 샘플 명단 채우기</button>
             <button class="btn btn-indigo btn-sm" data-action="save-roster">명단 저장</button>
+          </div>
+        </div>
+
+        <div class="t-section">
+          <div class="row-between">
+            <h4 class="title-xs">🔐 학생 비밀번호</h4>
+            <span class="tiny muted" id="pwSummary"></span>
+          </div>
+          <p class="muted tiny">학생이 처음 들어올 때 스스로 비밀번호(4~12자)를 만들어요. 잊어버리면 [초기화]를 눌러 주세요. 다음에 들어올 때 새로 만들 수 있어요. [수정]으로 선생님이 직접 정해 줄 수도 있어요.</p>
+          <div id="pwAdmin" class="pw-admin"></div>
+          <div class="row-between">
+            <label class="tiny muted pw-show"><input type="checkbox" id="pwShowAll"> 비밀번호 보이기</label>
+            <button class="btn btn-soft btn-sm" data-action="reset-all-pw">전체 초기화</button>
           </div>
         </div>
 
