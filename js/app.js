@@ -95,6 +95,10 @@ const fbCol = collection(classRef, 'feedbacks');
 const secretRef = doc(classRef, 'private', 'teacher');
 const sessCol = collection(classRef, 'sessions');
 const sessionRef = () => doc(classRef, 'teacherSessions', S.user.uid);
+const pwCol = collection(classRef, 'studentPw');          // 학생 비밀번호 (선생님만 읽음)
+const pwSetCol = collection(classRef, 'studentPwSet');    // 비밀번호를 만들었는지 표시 (누구나 읽음)
+const studentRef = () => doc(classRef, 'studentSessions', S.user.uid); // 이 기기에 들어온 학생
+const PW_MIN = 4, PW_MAX = 12;
 
 // ---------- 상태 ----------
 const S = {
@@ -117,7 +121,13 @@ const S = {
   confirmCb: null,
   unsubs: [],
   teacher: false,
-  animate: true
+  animate: true,
+  pwSet: {},        // 이름 → 표시 값(v) : 비밀번호를 만든 학생
+  pwSetLoaded: false,
+  myPwV: null,      // 내가 들어올 때의 표시 값 (선생님이 초기화·수정하면 바뀜 → 자동으로 나가기)
+  studentPws: {},   // 선생님 모드에서만: 이름 → 비밀번호
+  pwUnsub: null,
+  entering: false
 };
 
 // ---------- 유틸 ----------
@@ -127,6 +137,7 @@ function esc(v) {
 }
 function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
 function safeSet(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
+function randV() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
 function cleanName(raw) { return String(raw || '').replace(/[\/\\#?%]/g, '').replace(/\s+/g, ' ').trim().slice(0, 10); }
 // 한 시간에 한 친구에게는 마음을 한 번만: 시간+보낸 사람+받는 사람으로 문서 이름을 정함 (서버도 같은 규칙으로 확인)
 function pairId(sid, from, to) { return `${sid}__${from}__${to}`; }
@@ -238,12 +249,41 @@ function startListeners() {
     renderAll();
   }, onListenError));
 
+  // 학생 비밀번호를 만들었는지 (비밀번호 내용은 없음)
+  S.unsubs.push(onSnapshot(pwSetCol, (snap) => {
+    const m = {};
+    snap.docs.forEach((d) => { m[d.id] = String(d.data().v || ''); });
+    S.pwSet = m;
+    S.pwSetLoaded = true;
+    // 선생님이 내 비밀번호를 초기화·수정했으면 나가기
+    if (S.name && S.myPwV !== null && m[S.name] !== S.myPwV) {
+      logoutStudent('선생님이 비밀번호를 바꿨어요. 다시 들어와 주세요.');
+      return;
+    }
+    renderAll();
+  }, onListenError));
+
   // 이 기기가 선생님 모드인지 (서버에서 비밀번호가 확인된 기기만 표시가 생김)
   S.unsubs.push(onSnapshot(sessionRef(), (snap) => {
     S.teacher = snap.exists();
     if (!S.teacher && S.teacherView) exitTeacherView();
+    watchStudentPws();
     renderAll();
-  }, () => { S.teacher = false; }));
+  }, () => { S.teacher = false; watchStudentPws(); }));
+}
+
+// 선생님 모드일 때만 학생 비밀번호 목록을 받아 옴
+function watchStudentPws() {
+  if (S.teacher && !S.pwUnsub) {
+    S.pwUnsub = onSnapshot(pwCol, (snap) => {
+      const m = {};
+      snap.docs.forEach((d) => { m[d.id] = String(d.data().pw || ''); });
+      S.studentPws = m;
+      if (!$('teacherModal').hidden) renderPwAdmin();
+    }, (err) => { console.error(err); S.pwUnsub = null; S.studentPws = {}; });
+  } else if (!S.teacher && S.pwUnsub) {
+    S.pwUnsub(); S.pwUnsub = null; S.studentPws = {};
+  }
 }
 
 function onListenError(err) {
@@ -261,6 +301,10 @@ function onListenError(err) {
 function writeFailed(err) {
   console.error(err);
   const denied = err?.code === 'permission-denied';
+  if (denied && S.name && !S.teacher) {
+    logoutStudent('비밀번호가 바뀌어 다시 들어와야 해요.');
+    return;
+  }
   if (denied && S.teacher) {
     toast('선생님 비밀번호가 바뀌어 선생님 모드가 풀렸어요. 다시 들어와 주세요.', '🔑', 4500);
     deleteDoc(sessionRef()).catch(() => {});
@@ -314,7 +358,7 @@ function renderLogin() {
   $('rosterEmpty').hidden = !(empty && S.classLoaded);
   $('enterBtn').disabled = empty;
   const key = S.students.join('\n') + '|' + S.classLoaded;
-  if (sel.dataset.key === key) return; // 고르는 중인 값은 그대로 둠
+  if (sel.dataset.key === key) { renderPwArea(); return; } // 고르는 중인 값은 그대로 둠
   sel.dataset.key = key;
   const keep = sel.value;
   sel.innerHTML = empty
@@ -322,6 +366,33 @@ function renderLogin() {
     : '<option value="">내 이름을 찾아 골라요</option>' +
       [...S.students].sort((x, y) => x.localeCompare(y, 'ko')).map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
   if (keep && S.students.includes(keep)) sel.value = keep;
+  renderPwArea();
+}
+
+function renderPwArea() {
+  const name = $('nameSelect').value;
+  const area = $('pwArea');
+  area.hidden = !name;
+  if (!name) return;
+  const isNew = S.pwSetLoaded && !(name in S.pwSet);
+  if (area.dataset.for === name + '|' + isNew) return;
+  area.dataset.for = name + '|' + isNew;
+  $('pwHint').textContent = !S.pwSetLoaded ? '비밀번호 정보를 불러오는 중…'
+    : isNew ? `🌱 ${name} 친구는 처음이에요! 나만 아는 비밀번호를 만들어요 (${PW_MIN}~${PW_MAX}자)`
+    : `🔐 ${name} 친구의 비밀번호를 적어 주세요`;
+  $('pwHint').classList.toggle('new', isNew);
+  $('studentPw').placeholder = isNew ? '새 비밀번호' : '비밀번호';
+  $('studentPw2').hidden = !isNew;
+  $('pwDenied').hidden = true;
+  $('studentPw').value = ''; $('studentPw2').value = '';
+  $('enterBtn').querySelector('.enter-label') && ($('enterBtn').querySelector('.enter-label').textContent = isNew ? '비밀번호 만들고 들어가기' : '마음 나누러 가기');
+}
+
+function pwDenied(msg) {
+  const note = $('pwDenied');
+  note.textContent = msg; note.hidden = false;
+  const area = $('pwArea');
+  area.classList.remove('shake'); void area.offsetWidth; area.classList.add('shake');
 }
 
 async function enterAs(rawName) {
@@ -331,22 +402,67 @@ async function enterAs(rawName) {
     $('nameSelect').focus();
     return;
   }
+  if (S.entering) return;
+  if (!S.user || !S.pwSetLoaded) { toast('아직 연결 중이에요. 잠시 후 다시 해 주세요.', '⏳'); return; }
+  const pw = $('studentPw').value.trim();
+  const isNew = !(name in S.pwSet);
+  if (pw.length < PW_MIN) { pwDenied(`비밀번호는 ${PW_MIN}자 이상이에요.`); $('studentPw').focus(); return; }
+  if (isNew && pw !== $('studentPw2').value.trim()) { pwDenied('두 비밀번호가 달라요. 다시 적어 주세요.'); $('studentPw2').focus(); return; }
+
+  const btn = $('enterBtn');
+  S.entering = true; btn.disabled = true;
+  try {
+    let v;
+    if (isNew) {
+      // 처음: 비밀번호 만들기 + 표시 + 입장을 한 번에 (누가 먼저 만들었으면 서버가 거절)
+      v = randV();
+      const b = writeBatch(db);
+      b.set(doc(pwCol, name), { pw, at: serverTimestamp() });
+      b.set(doc(pwSetCol, name), { v });
+      b.set(studentRef(), { name, pw, at: serverTimestamp() });
+      await withTimeout(b.commit());
+    } else {
+      v = S.pwSet[name];
+      // 서버 보안 규칙이 비밀번호를 확인해 줌
+      await withTimeout(setDoc(studentRef(), { name, pw, at: serverTimestamp() }));
+      v = S.pwSet[name] ?? v;
+    }
+    S.myPwV = v;
+  } catch (err) {
+    console.error(err);
+    if (err?.code === 'timeout') pwDenied('인터넷 연결을 확인해 주세요.');
+    else if (err?.code === 'permission-denied') {
+      pwDenied(isNew ? '이미 비밀번호가 만들어져 있어요. 비밀번호를 적어 주세요.' : '비밀번호가 맞지 않아요. 잊어버렸으면 선생님께 말해 주세요.');
+      $('pwArea').dataset.for = '';
+    } else pwDenied('확인하지 못했어요. 다시 해 주세요.');
+    $('studentPw').select();
+    return;
+  } finally {
+    S.entering = false; btn.disabled = false;
+  }
+  $('studentPw').value = ''; $('studentPw2').value = '';
+  if (isNew) toast('비밀번호를 만들었어요! 잊지 않게 꼭 기억해요.', '🔐', 3500);
   S.name = name;
   S.animate = true;
   $('nameSelect').value = '';
   renderAll();
   window.scrollTo({ top: 0 });
-  toast(`${name} 친구, 환영해요! 친구들의 글에 마음을 전해 보세요.`, '🎉');
+  if (!isNew) toast(`${name} 친구, 환영해요! 친구들의 글에 마음을 전해 보세요.`, '🎉');
 }
 
-function logoutStudent() {
+function logoutStudent(msg) {
+  const was = S.name;
   S.name = null;
+  S.myPwV = null;
+  if (was && S.user) deleteDoc(studentRef()).catch(() => {});
   safeSet(NAME_KEY, null);
   S.filter = 'all'; S.query = '';
   $('searchInput').value = '';
-  closeAllModals();
+  if (typeof msg === 'string') document.querySelectorAll('.modal:not([hidden])').forEach((m) => { if (m.id !== 'teacherModal') closeModal(m.id); });
+  else closeAllModals();
   renderAll();
-  toast('다른 친구로 바꿀 수 있어요.', '👋');
+  if (typeof msg === 'string') toast(msg, '🔐', 4500);
+  else toast('다른 친구로 바꿀 수 있어요.', '👋');
 }
 
 // ---------- 대시보드 ----------
@@ -780,6 +896,82 @@ function renderTeacherModal() {
 
   const ri = $('rosterInput');
   if (document.activeElement !== ri && !ri.dataset.dirty) ri.value = S.students.join(', ');
+  renderPwAdmin();
+}
+
+// ---------- 선생님: 학생 비밀번호 ----------
+function renderPwAdmin() {
+  const box = $('pwAdmin');
+  if (!box || !S.teacher) return;
+  if (box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return; // 적는 중엔 그대로
+  const show = $('pwShowAll').checked;
+  const names = [...S.students].sort((x, y) => x.localeCompare(y, 'ko'));
+  const setN = names.filter((n) => n in S.pwSet).length;
+  $('pwSummary').textContent = `${setN} / ${names.length}명 만듦`;
+  box.innerHTML = names.map((n) => {
+    const has = n in S.pwSet;
+    const pw = S.studentPws[n];
+    const id = esc(n);
+    const val = !has ? '<span class="pw-val none">아직 안 만듦</span>'
+      : `<span class="pw-val">${show && pw ? esc(pw) : '••••'}</span>`;
+    return `<div class="pw-row-s"><b title="${id}">${id}</b>${val}
+      <button class="mini" data-action="edit-pw" data-name="${id}">수정</button>
+      <button class="mini rose" data-action="reset-pw" data-name="${id}" ${has ? '' : 'disabled'}>초기화</button></div>`;
+  }).join('') || '<p class="muted tiny">명단을 먼저 저장해 주세요.</p>';
+}
+
+function editPwRow(name) {
+  const row = [...$('pwAdmin').querySelectorAll('.pw-row-s')].find((r) => r.querySelector('b').textContent === name);
+  if (!row) return;
+  const span = row.querySelector('.pw-val');
+  const input = document.createElement('input');
+  input.type = 'text'; input.maxLength = PW_MAX; input.placeholder = `새 비밀번호 ${PW_MIN}~${PW_MAX}자`;
+  input.value = S.studentPws[name] || '';
+  input.dataset.pwFor = name;
+  span.replaceWith(input);
+  const btn = row.querySelector('[data-action="edit-pw"]');
+  btn.textContent = '저장'; btn.dataset.action = 'save-pw';
+  input.focus(); input.select();
+}
+
+async function saveStudentPw(name, raw) {
+  const pw = String(raw || '').trim();
+  if (pw.length < PW_MIN || pw.length > PW_MAX) { toast(`비밀번호는 ${PW_MIN}~${PW_MAX}자로 정해 주세요.`, '🔐'); return false; }
+  try {
+    const b = writeBatch(db);
+    b.set(doc(pwCol, name), { pw, at: serverTimestamp() });
+    b.set(doc(pwSetCol, name), { v: randV() });
+    await withTimeout(b.commit());
+    toast(`${name} 친구의 비밀번호를 바꿨어요.`, '🔐');
+    return true;
+  } catch (err) { writeFailed(err); return false; }
+}
+
+function resetStudentPw(name) {
+  showConfirm({ icon: '🔐', title: `${name} 친구 비밀번호 초기화`, text: '다음에 들어올 때 새 비밀번호를 스스로 만들어요. 지금 들어와 있는 기기에서는 나가져요.', yes: '초기화' }, async () => {
+    try {
+      const b = writeBatch(db);
+      b.delete(doc(pwCol, name));
+      b.delete(doc(pwSetCol, name));
+      await withTimeout(b.commit());
+      toast(`${name} 친구의 비밀번호를 초기화했어요.`, '🔐');
+    } catch (err) { writeFailed(err); }
+  });
+}
+
+function resetAllPw() {
+  const names = Object.keys(S.pwSet);
+  if (!names.length) { toast('아직 비밀번호를 만든 친구가 없어요.', '🔐'); return; }
+  showConfirm({ icon: '🔐', title: '학생 비밀번호 전체 초기화', text: `${names.length}명의 비밀번호를 모두 지워요. 모두 다음에 들어올 때 새로 만들어요.`, yes: '전체 초기화' }, async () => {
+    try {
+      for (let i = 0; i < names.length; i += 200) {
+        const b = writeBatch(db);
+        names.slice(i, i + 200).forEach((n) => { b.delete(doc(pwCol, n)); b.delete(doc(pwSetCol, n)); });
+        await withTimeout(b.commit(), 20000);
+      }
+      toast('학생 비밀번호를 모두 초기화했어요.', '🔐');
+    } catch (err) { writeFailed(err); }
+  });
 }
 
 function withTimeout(p, ms = 10000) {
@@ -1187,6 +1379,15 @@ document.addEventListener('click', (e) => {
     case 'exit-teacher-view': exitTeacherView(); break;
     case 'sample-roster': $('rosterInput').value = SAMPLE_ROSTER.join(', '); $('rosterInput').dataset.dirty = '1'; break;
     case 'save-roster': saveRoster(); break;
+    case 'toggle-pw': { const a = $('studentPw'), b2 = $('studentPw2'); const t = a.type === 'password' ? 'text' : 'password'; a.type = t; b2.type = t; break; }
+    case 'edit-pw': editPwRow(el.dataset.name); break;
+    case 'save-pw': {
+      const inp = el.closest('.pw-row-s').querySelector('input');
+      saveStudentPw(el.dataset.name, inp.value).then((ok) => { if (ok) { inp.blur(); renderPwAdmin(); } });
+      break;
+    }
+    case 'reset-pw': resetStudentPw(el.dataset.name); break;
+    case 'reset-all-pw': resetAllPw(); break;
     case 'export-csv': exportCsv(); break;
     case 'export-txt': exportTxt(); break;
     case 'import-legacy': importLegacy(); break;
@@ -1224,6 +1425,12 @@ document.addEventListener('keydown', (e) => {
 });
 
 $('loginForm').addEventListener('submit', (e) => { e.preventDefault(); enterAs($('nameSelect').value); });
+$('nameSelect').addEventListener('change', () => { renderPwArea(); if ($('nameSelect').value) setTimeout(() => $('studentPw').focus(), 50); });
+$('pwShowAll').addEventListener('change', renderPwAdmin);
+$('pwAdmin').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.dataset.pwFor) { e.preventDefault(); e.target.closest('.pw-row-s').querySelector('[data-action="save-pw"]').click(); }
+  if (e.key === 'Escape' && e.target.dataset.pwFor) { e.stopPropagation(); e.target.blur(); renderPwAdmin(); }
+});
 $('teacherSignedOut').addEventListener('submit', (e) => { e.preventDefault(); teacherLogin(); });
 $('pwChangeForm').addEventListener('submit', (e) => { e.preventDefault(); changePassword(); });
 $('searchInput').addEventListener('input', (e) => { S.query = e.target.value; renderDash(); });
